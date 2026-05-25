@@ -1,0 +1,4193 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+<meta charset="UTF-8">
+<title>獵才分案 LLM Reranking 第一版設計</title>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --primary-light: #2c5282;
+    --accent: #c97a3e;
+    --accent-light: #e8a86b;
+    --success: #2d6a4f;
+    --warning: #b08043;
+    --danger: #8b3a3a;
+    --text: #2a2a2a;
+    --text-sub: #555;
+    --text-mute: #888;
+    --bg: #faf8f3;
+    --bg-card: #ffffff;
+    --bg-soft: #f5f1e8;
+    --bg-highlight: #fdf6e3;
+    --border: #e2dccc;
+    --border-strong: #c7bda5;
+    --code-bg: #2d2d2d;
+    --code-text: #e8e3d8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+    padding-left: 240px;
+  }
+  .container { max-width: 1180px; margin: 0 auto; padding: 56px 48px 80px; }
+
+  /* Sidebar Navigation */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 100vh;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    padding: 28px 0 20px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 1px 0 4px rgba(0,0,0,0.03);
+  }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-head {
+    padding: 0 22px 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .sidebar-head .nav-brand {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .sidebar-head .nav-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.4;
+  }
+  .sidebar-head .nav-sub {
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sidebar nav .section-label {
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 14px 22px 6px;
+    border-top: 1px dashed var(--border);
+    margin-top: 6px;
+  }
+  .sidebar nav .section-label:first-child {
+    border-top: none;
+    margin-top: 0;
+  }
+  .sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 22px 7px 18px;
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.45;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .sidebar nav a:hover {
+    background: var(--bg-soft);
+    color: var(--primary);
+    border-left-color: var(--accent-light);
+  }
+  .sidebar nav a.active {
+    background: var(--bg-highlight);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 600;
+  }
+  .sidebar nav .nav-num {
+    flex-shrink: 0;
+    width: 24px;
+    font-size: 11px;
+    color: var(--text-mute);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .sidebar nav a.active .nav-num { color: var(--accent); }
+  .sidebar nav .nav-text { flex: 1; }
+
+  /* Anchor offset (for fixed header / smooth scroll target) */
+  [id] { scroll-margin-top: 24px; }
+
+  /* Responsive: hide sidebar on narrow screens */
+  @media (max-width: 1024px) {
+    body { padding-left: 0; }
+    .sidebar { display: none; }
+  }
+
+  /* Typography */
+  h1 { font-size: 32px; font-weight: 700; color: var(--primary); margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 26px; font-weight: 700; color: var(--primary); margin: 56px 0 20px; padding-bottom: 12px; border-bottom: 2px solid var(--primary); letter-spacing: -0.01em; }
+  h3 { font-size: 20px; font-weight: 600; color: var(--primary-light); margin: 32px 0 14px; }
+  h4 { font-size: 17px; font-weight: 600; color: var(--text); margin: 20px 0 10px; }
+  p { margin: 0 0 14px; }
+  .sub { font-size: 14px; color: var(--text-sub); }
+  .mute { font-size: 13px; color: var(--text-mute); }
+
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+    padding: 48px 56px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.15);
+  }
+  .hero h1 { color: #fff; font-size: 30px; }
+  .hero .lead { font-size: 16px; opacity: 0.92; margin-top: 12px; }
+  .hero .tag { display: inline-block; background: rgba(255,255,255,0.18); padding: 4px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; letter-spacing: 0.05em; }
+
+  /* TL;DR Box */
+  .tldr {
+    background: var(--bg-highlight);
+    border-left: 5px solid var(--accent);
+    padding: 24px 28px;
+    margin: 32px 0;
+    border-radius: 4px;
+  }
+  .tldr .label { font-size: 13px; color: var(--accent); font-weight: 700; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .tldr .quote { font-size: 18px; line-height: 1.65; color: var(--primary); font-weight: 500; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .card-soft {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 12px 0;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  /* Three Layer Architecture */
+  .arch-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 36px 32px;
+    margin: 20px 0;
+  }
+  .layer {
+    position: relative;
+    background: var(--bg-soft);
+    border: 2px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+  .layer.l1 { border-color: var(--primary); background: #eaf0f7; }
+  .layer.l2 { border-color: var(--accent); background: #fbf2e6; }
+  .layer.l3 { border-color: var(--success); background: #e8f1ec; }
+  .layer.l4 { border-color: var(--warning); background: #f7f0e0; }
+  .layer-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .layer-title { font-size: 17px; font-weight: 700; color: var(--primary); }
+  .layer-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--primary); color: #fff; font-size: 14px; font-weight: 700; margin-right: 10px;
+  }
+  .layer.l2 .layer-num { background: var(--accent); }
+  .layer.l3 .layer-num { background: var(--success); }
+  .layer.l4 .layer-num { background: var(--warning); }
+  .layer-body { font-size: 14px; color: var(--text-sub); }
+  .arrow-down {
+    text-align: center;
+    color: var(--border-strong);
+    font-size: 24px;
+    line-height: 1;
+    margin: -4px 0 6px;
+    user-select: none;
+  }
+
+  /* Architecture Horizontal Flow */
+  .arch-io-title {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: #888;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .arch-io-groups {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+  .arch-io-group {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    padding: 5px 8px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+    border-right: 2px solid;
+    border-radius: 4px 4px 0 0;
+  }
+  .arch-io-group.input-group {
+    color: var(--primary);
+    border-color: rgba(30,58,95,0.35);
+  }
+  .arch-io-group.output-group {
+    color: #b08043;
+    border-color: rgba(176,128,67,0.45);
+  }
+  .arch-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    margin: 0 0 22px 0;
+  }
+  .arch-card {
+    flex: 1;
+    min-width: 0;
+    border-radius: 8px;
+    border: 2px solid;
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    background: var(--bg-card);
+  }
+  .arch-card.l1 { background: #eaf0f7; border-color: var(--primary); }
+  .arch-card.l2 { background: #fbf2e6; border-color: var(--accent); }
+  .arch-card.l3 { background: #e8f1ec; border-color: var(--success); }
+  .arch-card.l4 { background: #f7f0e0; border-color: var(--warning); }
+  .arch-card.l5 { background: #f1ece4; border-color: #9a6b40; }
+  .arch-card.l6 { background: #eef1f4; border-color: #7a8796; }
+  .arch-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .arch-num {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .arch-card.l1 .arch-num { background: var(--primary); }
+  .arch-card.l2 .arch-num { background: var(--accent); }
+  .arch-card.l3 .arch-num { background: var(--success); }
+  .arch-card.l4 .arch-num { background: var(--warning); }
+  .arch-card.l5 .arch-num { background: #9a6b40; }
+  .arch-card.l6 .arch-num { background: #7a8796; }
+  .arch-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .arch-pill {
+    font-size: 11.5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    line-height: 1.5;
+    display: inline-block;
+    align-self: flex-start;
+    overflow-wrap: anywhere;
+  }
+  .arch-card.l1 .arch-pill { color: var(--primary); border: 1px solid rgba(30,58,95,0.35); }
+  .arch-card.l2 .arch-pill { color: var(--accent); border: 1px solid rgba(201,122,62,0.4); }
+  .arch-card.l3 .arch-pill { color: var(--success); border: 1px solid rgba(45,106,79,0.4); }
+  .arch-card.l4 .arch-pill { color: var(--warning); border: 1px solid rgba(176,128,67,0.4); }
+  .arch-card.l5 .arch-pill { color: #9a6b40; border: 1px solid rgba(154,107,64,0.42); }
+  .arch-card.l6 .arch-pill { color: #5e6b78; border: 1px solid rgba(122,135,150,0.45); }
+  .arch-body {
+    font-size: 12.5px;
+    color: var(--text-sub);
+    line-height: 1.65;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .arch-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-strong);
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 12px;
+  }
+
+  /* Code Block */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 20px 24px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.7;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Microsoft JhengHei", monospace;
+    margin: 14px 0;
+  }
+  pre.light {
+    background: #f3eedf;
+    color: #2a2a2a;
+    border: 1px solid var(--border);
+  }
+  code.inline {
+    background: var(--bg-highlight);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  th {
+    background: var(--primary);
+    color: #fff;
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  td {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--bg-soft); }
+
+  /* Pills / Tags */
+  .pill {
+    display: inline-block;
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin: 2px 4px 2px 0;
+    font-weight: 500;
+  }
+  .pill-blue { background: #dce8f5; color: var(--primary); }
+  .pill-orange { background: #fbe4cc; color: var(--accent); }
+  .pill-green { background: #d4e7dc; color: var(--success); }
+  .pill-red { background: #f0d8d8; color: var(--danger); }
+  .pill-gray { background: #e5e1d8; color: var(--text-sub); }
+
+  /* Rule Block */
+  .rule {
+    border-left: 4px solid var(--primary);
+    background: var(--bg-card);
+    padding: 18px 24px;
+    margin: 14px 0;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .rule .rule-num {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .rule .rule-title { font-size: 17px; font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+
+  /* Before / After Compare */
+  .io-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+    align-items: start;
+  }
+  .io-col h3 { margin-top: 0; }
+  .io-col pre.light { height: 100%; box-sizing: border-box; }
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 18px;
+    align-items: stretch;
+    margin: 18px 0;
+  }
+  .compare .col {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .compare .col.before { border-top: 4px solid var(--text-mute); }
+  .compare .col.after { border-top: 4px solid var(--success); }
+  .compare .col-label {
+    font-size: 12px; letter-spacing: 0.15em; color: var(--text-mute);
+    font-weight: 700; margin-bottom: 10px; text-transform: uppercase;
+  }
+  .compare .col.after .col-label { color: var(--success); }
+  .compare .arrow-mid {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; color: var(--accent); font-weight: 700;
+  }
+  .rank-item {
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: var(--bg-soft);
+    font-size: 14px;
+  }
+  .rank-item .rk-no { color: var(--accent); font-weight: 700; margin-right: 6px; }
+  .rank-item .rk-score { color: var(--text-mute); font-size: 13px; margin-left: 6px; }
+
+  /* Decision Flow */
+  .flow {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .flow-body { flex: 1; }
+  .flow-title { font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+  .flow-desc { font-size: 14px; color: var(--text-sub); }
+
+  /* Principle */
+  .principle {
+    background: linear-gradient(135deg, #fbf2e6 0%, #fdf6e3 100%);
+    border: 1px solid var(--accent-light);
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin: 28px 0;
+    text-align: center;
+  }
+  .principle .ptitle {
+    font-size: 14px; color: var(--accent); letter-spacing: 0.15em;
+    font-weight: 700; margin-bottom: 10px;
+  }
+  .principle .pquote {
+    font-size: 20px; color: var(--primary); font-weight: 600; line-height: 1.6;
+  }
+
+  /* Footer note */
+  .footer-note {
+    text-align: center;
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-mute);
+  }
+
+  /* Two column inline */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0;
+  }
+  .col-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 22px;
+  }
+  .col-block h4 { margin-top: 0; }
+
+  /* Highlight callout */
+  .callout {
+    background: var(--bg-highlight);
+    border: 1px dashed var(--accent);
+    padding: 14px 20px;
+    border-radius: 6px;
+    margin: 14px 0;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .callout strong { color: var(--accent); }
+
+  /* Framing Compare (Bad vs Good) */
+  .framing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 22px 0 8px;
+  }
+  .framing-card {
+    padding: 24px 26px 22px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .framing-card.bad {
+    background: #fbeded;
+    border-color: #e8c8c8;
+    border-left: 4px solid var(--danger);
+  }
+  .framing-card.good {
+    background: #e8f1ec;
+    border-color: #c4d9cc;
+    border-left: 4px solid var(--success);
+  }
+  .framing-card .fc-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 14px;
+    line-height: 1.4;
+  }
+  .framing-card.bad .fc-title { color: var(--danger); }
+  .framing-card.good .fc-title { color: var(--success); }
+  .framing-card .fc-quote {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 0 0 14px;
+    line-height: 1.75;
+    font-style: normal;
+  }
+  .framing-card.bad .fc-quote { border-color: #e8c8c8; }
+  .framing-card.good .fc-quote { border-color: #c4d9cc; }
+  .framing-card .fc-note {
+    font-size: 14px;
+    color: var(--text-sub);
+    line-height: 1.7;
+    margin: 0;
+  }
+  .framing-card .fc-note strong { color: var(--text); }
+
+  /* SVG flow */
+  .svg-wrap { display: flex; justify-content: center; margin: 20px 0; }
+
+  /* Why LLM Section */
+  .why-section { margin: 36px 0 32px; }
+  .why-hero { margin-bottom: 24px; }
+  .why-hero .small-label {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .why-hero h2 {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 14px;
+    padding-bottom: 0;
+    border-bottom: none;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+  .why-hero .sublead {
+    font-size: 16px;
+    color: var(--text-sub);
+    line-height: 1.75;
+    margin: 0;
+    max-width: 880px;
+  }
+  .why-hero .sublead em {
+    font-style: normal;
+    background: var(--bg-highlight);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .pc-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 26px;
+    position: relative;
+  }
+  .pc-card.cons {
+    border-top: 4px solid var(--text-mute);
+    background: var(--bg-soft);
+  }
+  .pc-card.pros {
+    border-top: 4px solid var(--accent);
+    background: linear-gradient(135deg, #fdf6e3 0%, #ffffff 100%);
+  }
+  .pc-card .pc-label {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--text-mute);
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .pc-card.pros .pc-label { color: var(--accent); }
+  .pc-card .pc-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+  .pc-card ul {
+    padding-left: 0;
+    margin: 0;
+    list-style: none;
+  }
+  .pc-card ul li {
+    padding: 10px 0 10px 24px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--text);
+    border-top: 1px dashed var(--border);
+    position: relative;
+  }
+  .pc-card ul li:first-child { border-top: none; }
+  .pc-card ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 19px;
+    width: 14px;
+    height: 2px;
+    background: var(--text-mute);
+  }
+  .pc-card.pros ul li::before { background: var(--accent); }
+  .pc-card ul li strong {
+    color: var(--primary);
+    font-weight: 700;
+    margin-right: 2px;
+  }
+
+  /* Pipeline Compare */
+  .pipeline-section {
+    margin: 32px 0 40px;
+  }
+  .pipeline-section h2 {
+    margin-top: 0;
+  }
+  .pipeline-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .pipeline-wrap.before {
+    background: var(--bg-soft);
+    border-color: var(--border-strong);
+  }
+  .pipeline-wrap.after {
+    background: linear-gradient(135deg, #fdf6e3 0%, #fbf2e6 100%);
+    border-color: var(--accent-light);
+    border-width: 2px;
+  }
+  .pipeline-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-mute);
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .pipeline-wrap.after .pipeline-label { color: var(--accent); }
+  .pipeline-label .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-mute);
+  }
+  .pipeline-wrap.after .pipeline-label .dot { background: var(--accent); }
+  .pipeline-headline {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 16px;
+  }
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .pipeline-node {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 14px 10px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .pipeline-wrap.before .pipeline-node { background: #fff; }
+  .pipeline-node.new {
+    border-color: var(--accent);
+    border-width: 2px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(201, 122, 62, 0.18);
+  }
+  .pipeline-node .step {
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .pipeline-node .name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 4px 0 2px;
+    line-height: 1.35;
+  }
+  .pipeline-node.new .name { color: var(--accent); }
+  .pipeline-node .desc {
+    font-size: 12px;
+    color: var(--text-sub);
+    line-height: 1.45;
+    margin-top: 4px;
+  }
+  .pipeline-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-strong);
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 12px;
+  }
+  .new-badge {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .pipeline-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+    gap: 12px;
+  }
+  .pipeline-divider .line {
+    flex: 1; height: 1px; background: var(--border);
+  }
+  .pipeline-divider .arrow-big {
+    font-size: 22px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Pipeline Grid — Stacked (Horizontal Flow) */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin: 12px 0 24px;
+  }
+  .pipeline-grid .pipeline-wrap {
+    margin-bottom: 0;
+    background: var(--bg-card);
+    border-color: var(--border);
+    border-width: 1px;
+  }
+  .pipeline-grid .pipeline-wrap.after {
+    background: var(--bg-card);
+    border-color: var(--border);
+    border-width: 1px;
+  }
+  .ph-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ph-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .ph-tag {
+    font-size: 11.5px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: var(--bg-soft);
+    color: var(--text-sub);
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  .ph-tag.accent {
+    background: var(--bg-highlight);
+    color: var(--accent);
+    border-color: var(--accent-light);
+  }
+  .pv-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pv-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    margin: 0;
+  }
+  .pv-step.new {
+    background: linear-gradient(135deg, #fdf6e3 0%, #fbf2e6 100%);
+    border-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(201, 122, 62, 0.12);
+  }
+  .pv-num {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .pv-step.new .pv-num { background: var(--accent); }
+  .pv-text {
+    font-size: 14.5px;
+    color: var(--text);
+    font-weight: 500;
+    line-height: 1.55;
+  }
+  .pv-step.new .pv-text strong {
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 2px;
+  }
+
+  /* Horizontal Flow Steps */
+  .pipeline-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .pf-step {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 8px 12px;
+    position: relative;
+  }
+  .pf-shared-note {
+    font-size: 13px;
+    color: var(--text-sub);
+    line-height: 1.7;
+    margin: 14px 4px 0;
+    padding: 10px 16px;
+    background: rgba(201,122,62,0.05);
+    border-left: 3px solid rgba(201,122,62,0.4);
+    border-radius: 0 6px 6px 0;
+  }
+  .pf-note-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pf-note-row + .pf-note-row {
+    margin-top: 8px;
+  }
+  .pf-note-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .pf-sub {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.4;
+    margin-top: 6px;
+    text-align: center;
+  }
+  .pf-pkg-tag {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 11.5px;
+  }
+  .pf-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .pf-info-panel {
+    background: rgba(255,255,255,0.75);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .pf-info-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .pf-pkg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .pf-pkg-row + .pf-pkg-row { margin-top: 11px; }
+  .pf-pkg-icon { font-size: 19px; flex-shrink: 0; line-height: 1.3; }
+  .pf-pkg-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .pf-pkg-desc {
+    font-size: 12.5px;
+    color: var(--text-sub);
+    line-height: 1.5;
+  }
+  .pf-key-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .pf-key-item + .pf-key-item { margin-top: 8px; }
+  .pf-key-num {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    margin-top: 1px;
+  }
+  .pf-note-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(201,122,62,0.05);
+    border: 1px solid rgba(201,122,62,0.2);
+    border-radius: 8px;
+    padding: 11px 16px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-sub);
+    line-height: 1.6;
+  }
+  .pf-note-bar-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .pf-corner {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    background: var(--accent);
+    border-radius: 0 8px 0 6px;
+    padding: 3px 7px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #fff;
+    font-weight: 700;
+  }
+  .pf-step.new {
+    background: linear-gradient(135deg, #fdf6e3 0%, #fbf2e6 100%);
+    border-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(201, 122, 62, 0.12);
+  }
+  .pf-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .pf-step.new .pf-num { background: var(--accent); }
+  .pf-text {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .pf-step.new .pf-text strong {
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 1px;
+  }
+  .pf-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-strong);
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 10px;
+  }
+
+  /* Diff Summary */
+  .diff-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .diff-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .diff-card .dnum {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .diff-card .dtitle {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 4px 0 10px;
+  }
+  .diff-row {
+    font-size: 13px;
+    margin: 4px 0;
+    color: var(--text-sub);
+  }
+  .diff-row .ltag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .diff-row.before-row .ltag { background: #e5e1d8; color: var(--text-sub); }
+  .diff-row.after-row .ltag { background: var(--accent); color: #fff; }
+
+  ul, ol { padding-left: 24px; }
+  ul li, ol li { margin-bottom: 6px; }
+
+  /* Schema vs Example side-by-side */
+  .schema-example-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+    align-items: stretch;
+  }
+  .collapsible-block {
+    position: relative;
+    margin: 16px 0 24px;
+  }
+  .collapsible-state {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .collapsible-content {
+    max-height: min(62vh, 660px);
+    overflow: hidden;
+    transition: max-height 0.32s ease;
+  }
+  .collapsible-state:checked ~ .collapsible-content {
+    max-height: none;
+    overflow: visible;
+  }
+  .collapsible-block .schema-example-grid {
+    margin: 0;
+  }
+  .collapsible-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 44px;
+    height: 118px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(251, 250, 248, 0), rgba(251, 250, 248, 0.96) 70%, var(--bg) 100%);
+  }
+  .collapsible-state:checked ~ .collapsible-fade {
+    display: none;
+  }
+  .collapsible-toggle {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 42px;
+    margin-top: 10px;
+    border: 1px solid rgba(201, 122, 62, 0.42);
+    border-radius: 8px;
+    background: #fff8ef;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .collapsible-toggle-top {
+    display: none;
+    margin: 0 0 10px;
+  }
+  .collapsible-state:checked ~ .collapsible-toggle-top {
+    display: inline-flex;
+    position: sticky;
+    top: 12px;
+  }
+  .collapsible-state:checked ~ .collapsible-toggle-bottom {
+    display: none;
+  }
+  .collapsible-toggle:hover,
+  .collapsible-toggle:focus-visible {
+    background: #f6e4cc;
+    border-color: var(--accent);
+    outline: none;
+  }
+  .collapsible-toggle-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .se-col { display: flex; flex-direction: column; min-width: 0; }
+  .se-col h4.se-title {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+  }
+  .se-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .se-title-row .se-title {
+    margin: 0;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+  .prompt-tip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .prompt-tip {
+    border: 1px solid rgba(201, 122, 62, 0.44);
+    background: #fff8ef;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .prompt-tip:hover,
+  .prompt-tip:focus-visible {
+    background: #f6e4cc;
+    border-color: var(--accent);
+    outline: none;
+  }
+  .prompt-tip-modal[hidden] { display: none; }
+  .prompt-tip-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .prompt-tip-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(18, 32, 49, 0.46);
+  }
+  .prompt-tip-card {
+    position: relative;
+    width: min(680px, calc(100vw - 40px));
+    max-height: min(76vh, 720px);
+    overflow: auto;
+    background: #fffdf8;
+    border: 1px solid #dbc9ad;
+    border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(31, 45, 62, 0.28);
+    padding: 24px 26px 22px;
+  }
+  .prompt-tip-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--text-sub);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .prompt-tip-close:hover,
+  .prompt-tip-close:focus-visible {
+    color: var(--primary);
+    border-color: var(--accent);
+    outline: none;
+  }
+  .prompt-tip-eyebrow {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .prompt-tip-card h3 {
+    margin: 0 36px 14px 0;
+    color: var(--primary);
+    font-size: 22px;
+    line-height: 1.35;
+  }
+  .prompt-tip-body {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  .prompt-tip-body h4 {
+    margin: 16px 0 6px;
+    color: var(--primary);
+    font-size: 14px;
+  }
+  .prompt-tip-body ul {
+    margin: 0 0 8px;
+    padding-left: 20px;
+  }
+  .prompt-tip-body li { margin-bottom: 4px; }
+  .prompt-tip-body code {
+    background: var(--bg-highlight);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .prompt-tip-source {
+    display: inline-block;
+    margin: 0 0 12px;
+    padding: 5px 9px;
+    border: 1px solid rgba(201, 122, 62, 0.34);
+    border-radius: 999px;
+    background: #fff8ef;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .prompt-tip-pre {
+    margin: 0;
+    max-width: 100%;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: hidden;
+    background: #fbfaf6;
+    color: #243246;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 1.75;
+    font-family: "Consolas", "Microsoft JhengHei", monospace;
+  }
+  .se-fields {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    flex: 1;
+  }
+  .se-field {
+    display: grid;
+    grid-template-columns: 130px 96px 1fr;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .se-field:last-child { border-bottom: none; }
+  .se-section-label {
+    grid-column: 1 / -1;
+    background: var(--bg-soft);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.07em;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .se-field-name {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .se-field-source {
+    color: var(--text-sub);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .se-field-desc {
+    color: var(--text-sub);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .se-col pre.light {
+    margin: 0;
+    flex: 1;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* Consultant comparison cards */
+  .consult-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 18px 0;
+  }
+  .consult-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .consult-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fafaf8;
+    gap: 8px;
+  }
+  .consult-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+  }
+  .consult-rank {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #eef2f7;
+    color: #666;
+    white-space: nowrap;
+  }
+  .consult-rank.highlight {
+    background: var(--accent);
+    color: #fff;
+  }
+  .consult-row {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    align-items: start;
+  }
+  .consult-row:last-child { border-bottom: none; }
+  .consult-label {
+    color: var(--text-sub);
+    font-size: 13px;
+    padding-top: 1px;
+  }
+  .consult-val {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  /* Consultant card — sectioned (detailed) */
+  .consult-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .consult-section:last-child { border-bottom: none; }
+  .consult-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 8px;
+    letter-spacing: 0.3px;
+  }
+  .consult-section .consult-row {
+    padding: 5px 0;
+    border-bottom: none;
+    grid-template-columns: 86px 1fr;
+  }
+  .consult-section .consult-label { font-size: 13px; }
+  .consult-section .consult-val { font-size: 13px; }
+  .consult-subblock {
+    margin-bottom: 9px;
+    padding: 9px 10px;
+    background: #fafaf8;
+    border-radius: 6px;
+    border-left: 3px solid var(--primary);
+  }
+  .consult-subblock:last-child { margin-bottom: 0; }
+  .consult-subblock-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .consult-sub-label {
+    color: var(--text-sub);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .consult-sub-val {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 2px 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .consult-subblock-desc {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    margin: 0;
+  }
+  .consult-bullets {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+  .consult-bullets li { margin-bottom: 3px; }
+  .consult-bullets li:last-child { margin-bottom: 0; }
+  .consult-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #eef2f7;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* Reranking 判斷提示 block */
+  .consult-section.reranking { background: #faf6ef; }
+  .rerank-suggestion {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .rerank-suggestion.up { background: var(--accent); }
+  .rerank-suggestion.down { background: #d4a017; }
+  .rerank-suggestion.keep { background: #8a8a8a; }
+  .rerank-reason {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    margin: 0;
+  }
+
+  /* Bold inline */
+  strong { color: var(--primary); }
+
+  /* Smooth scroll */
+  html { scroll-behavior: smooth; }
+
+  /* ── 右側可收合側邊欄 ── */
+  #edit-sidebar {
+    position: fixed;
+    top: 0; right: 0;
+    width: 220px;
+    height: 100vh;
+    background: #fff;
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 20px rgba(0,0,0,0.08);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(0);
+  }
+  #edit-sidebar.collapsed { transform: translateX(220px); }
+  #sidebar-tab {
+    position: absolute;
+    left: -32px; top: 50%;
+    transform: translateY(-50%);
+    width: 32px; height: 64px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -3px 0 10px rgba(0,0,0,0.07);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px; color: var(--primary); font-weight: 700;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  #sidebar-tab:hover { background: var(--primary); color: #fff; }
+  #sidebar-head {
+    padding: 20px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+    color: #fff;
+  }
+  #sidebar-head .sidebar-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; opacity: 0.9; }
+  #sidebar-head .sidebar-sub { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+  #sidebar-body {
+    flex: 1; overflow-y: auto; padding: 18px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .sb-label {
+    font-size: 11px; font-weight: 700; color: var(--text-sub);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .sb-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 9px 14px; border-radius: 8px;
+    border: 1.5px solid transparent; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; text-align: left;
+  }
+  .sb-btn.primary { background: #f0f4f8; border-color: #d0dcea; color: var(--primary); }
+  .sb-btn.primary:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .sb-btn.primary.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .sb-btn.success { background: #f0faf4; border-color: #b8dfc8; color: #2d6a4f; }
+  .sb-btn.success:hover { background: #2d6a4f; color: #fff; border-color: #2d6a4f; }
+  #format-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fmt-btn {
+    flex: 1; min-width: 36px; padding: 7px 6px;
+    border: 1.5px solid var(--border); border-radius: 6px;
+    background: #fafafa; color: var(--text); font-size: 13px; font-weight: 700;
+    cursor: pointer; text-align: center; transition: all 0.15s;
+  }
+  .fmt-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+  #color-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .color-dot {
+    width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+    border: 2.5px solid transparent; transition: border-color 0.15s, transform 0.1s;
+  }
+  .color-dot:hover { border-color: #333; transform: scale(1.15); }
+  .sb-divider { height: 1px; background: var(--border); margin: 2px 0; }
+  #edit-notice {
+    display: none;
+    position: fixed;
+    top: 0; left: 240px; right: 220px;
+    z-index: 9996;
+    background: #fffbe6; border-bottom: 2px solid #f5c842;
+    padding: 9px 24px; font-size: 13px; color: #7a5c00; font-weight: 500;
+    text-align: center;
+  }
+  body.editing #edit-notice { display: block; }
+  body.editing [contenteditable="true"] { outline: none; border-radius: 4px; transition: background 0.15s; }
+  body.editing [contenteditable="true"]:hover { background: rgba(201,122,62,0.07); cursor: text; }
+  body.editing [contenteditable="true"]:focus {
+    background: rgba(201,122,62,0.12);
+    box-shadow: 0 0 0 2px rgba(201,122,62,0.3);
+  }
+  body.mark-mode { cursor: crosshair; }
+  body.mark-mode .hl-box { cursor: default; }
+  body.mark-mode #edit-sidebar,
+  body.mark-mode #edit-sidebar * { cursor: auto; }
+  .hl-box {
+    position: absolute; pointer-events: auto; z-index: 5000;
+    border-radius: 6px; background: rgba(201,122,62,0.06);
+    box-shadow: 0 0 0 1px rgba(201,122,62,0.25), 0 4px 16px rgba(201,122,62,0.18);
+  }
+  .hl-box .hl-border {
+    position: absolute; inset: 0;
+    border: 3px dashed #c97a3e; border-radius: 6px;
+    pointer-events: none; animation: hl-march 1.2s linear infinite;
+  }
+  @keyframes hl-march { to { background-position: 24px 0, -24px 0, 0 24px, 0 -24px; } }
+  .hl-corner {
+    position: absolute; width: 14px; height: 14px;
+    border: 3.5px solid #b8651f; pointer-events: none;
+    animation: hl-pulse 2.2s ease-in-out infinite;
+  }
+  .hl-corner.tl { top:-2px; left:-2px; border-right:none; border-bottom:none; border-top-left-radius:4px; }
+  .hl-corner.tr { top:-2px; right:-2px; border-left:none; border-bottom:none; border-top-right-radius:4px; }
+  .hl-corner.bl { bottom:-2px; left:-2px; border-right:none; border-top:none; border-bottom-left-radius:4px; }
+  .hl-corner.br { bottom:-2px; right:-2px; border-left:none; border-top:none; border-bottom-right-radius:4px; }
+  @keyframes hl-pulse { 0%,100%{opacity:0.95} 50%{opacity:0.5} }
+  .hl-close {
+    position: absolute; top:-12px; right:-12px;
+    width:22px; height:22px; border-radius:50%;
+    background:#fff; border:1.5px solid #c97a3e; color:#c97a3e;
+    font-size:14px; font-weight:700; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,0.12);
+    opacity:0; transition:opacity 0.18s, background 0.15s; padding:0;
+  }
+  .hl-close:hover { background:#c97a3e; color:#fff; }
+  .hl-box:hover .hl-close { opacity:1; }
+  .hl-resize {
+    position:absolute; bottom:-8px; right:-8px;
+    width:16px; height:16px; border-radius:3px;
+    background:#fff; border:1.5px solid #c97a3e; cursor:nwse-resize;
+    opacity:0; transition:opacity 0.18s; box-shadow:0 1px 3px rgba(0,0,0,0.12);
+  }
+  .hl-resize::before {
+    content:''; position:absolute; inset:3px;
+    background: linear-gradient(135deg, transparent 50%, #c97a3e 50%, #c97a3e 60%, transparent 60%, transparent 70%, #c97a3e 70%, #c97a3e 80%, transparent 80%);
+  }
+  .hl-box:hover .hl-resize { opacity:1; }
+  #hl-draft {
+    position:absolute; z-index:4999;
+    border:3px dashed #c97a3e; background:rgba(201,122,62,0.08);
+    border-radius:4px; pointer-events:none; display:none;
+  }
+  #mini-bar {
+    display:none; position:fixed; z-index:10000;
+    background:#1e3a5f; border-radius:6px; padding:4px 8px;
+    gap:4px; align-items:center; box-shadow:0 4px 14px rgba(0,0,0,0.22);
+    transform:translateX(-50%); pointer-events:none; opacity:0; transition:opacity 0.12s;
+  }
+  #mini-bar.show { display:flex; pointer-events:auto; opacity:1; }
+  #mini-bar button {
+    background:transparent; border:none; color:#fff;
+    font-size:12px; font-weight:700; padding:3px 7px; border-radius:4px; cursor:pointer;
+  }
+  #mini-bar button:hover { background:rgba(255,255,255,0.2); }
+
+  /* ── Note 便利貼標記 ── */
+  body.note-mode { cursor: copy; }
+  body.note-mode .note-marker { cursor: pointer; }
+  body.note-mode #edit-sidebar, body.note-mode #edit-sidebar * { cursor: auto; }
+
+  .note-marker {
+    position: absolute;
+    z-index: 5500;
+    width: 28px; height: 28px;
+    background: #fff8d6;
+    border: 2px solid #d4a017;
+    border-radius: 50% 50% 50% 4px;
+    cursor: grab;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 3px 10px rgba(212,160,23,0.35);
+    user-select: none;
+  }
+  .note-marker:active { cursor: grabbing; }
+  .note-marker.is-dragging { opacity: 0.85; }
+  .note-marker::before {
+    content: '📝';
+    display: block;
+    line-height: 1;
+    font-size: 13px;
+  }
+
+  .note-popup {
+    display: none;
+    position: absolute;
+    top: 34px; left: -8px;
+    z-index: 5501;
+    width: 280px;
+    min-width: 220px;
+    min-height: 130px;
+    max-width: 600px;
+    max-height: 500px;
+    background: #fffbe6;
+    border: 1.5px solid #d4a017;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    cursor: default;
+    resize: both;
+    overflow: auto;
+  }
+  .note-marker.open .note-popup { display: flex; flex-direction: column; }
+  .note-popup::before {
+    content: '';
+    position: absolute;
+    top: -7px; left: 14px;
+    width: 11px; height: 11px;
+    background: #fffbe6;
+    border-left: 1.5px solid #d4a017;
+    border-top: 1.5px solid #d4a017;
+    transform: rotate(45deg);
+  }
+  .note-text {
+    flex: 1;
+    min-height: 60px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #5a4a00;
+    background: transparent;
+    border: none;
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .note-text:empty::before {
+    content: '在這裡輸入備註（支援換行）...';
+    color: #b8a45c;
+  }
+  .note-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e0c560;
+    justify-content: flex-end;
+  }
+  .note-btn {
+    border: none;
+    background: transparent;
+    color: #7a5c00;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .note-btn:hover { background: rgba(212,160,23,0.18); }
+  .note-btn.delete { color: #b03030; }
+  .note-btn.delete:hover { background: rgba(176,48,48,0.1); }
+</style>
+</head>
+<body class="">
+
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+  <div class="sidebar-head">
+    <div class="nav-brand">獵才分案</div>
+    <div class="nav-title">LLM Reranking</div>
+    <div class="nav-sub">第一版設計藍圖</div>
+  </div>
+  <nav>
+    <div class="section-label">前言</div>
+    <ul>
+      <li><a href="#why" class=""><span class="nav-num">01</span><span class="nav-text">為什麼要從 ML 轉</span></a></li>
+      <li><a href="#pipeline" class=""><span class="nav-num">02</span><span class="nav-text">框架流程對比</span></a></li>
+    </ul>
+    <div class="section-label">第一版設計</div>
+    <ul>
+      <li><a href="#ch2" class=""><span class="nav-num">03</span><span class="nav-text">整體架構</span></a></li>
+      <li><a href="#ch3" class=""><span class="nav-num">04</span><span class="nav-text">案件資料包</span></a></li>
+      <li><a href="#ch3a" class=""><span class="nav-num">05</span><span class="nav-text">公司資料包</span></a></li>
+      <li><a href="#ch3b" class=""><span class="nav-num">06</span><span class="nav-text">顧問能力包</span></a></li>
+      <li><a href="#ch4" class=""><span class="nav-num">07</span><span class="nav-text">顧問比較包</span></a></li>
+      <li><a href="#ch5" class=""><span class="nav-num">08</span><span class="nav-text">LLM 決策流程</span></a></li>
+      <li><a href="#ch6" class=""><span class="nav-num">09</span><span class="nav-text">排序判斷規則</span></a></li>
+      <li><a href="#ch7" class=""><span class="nav-num">10</span><span class="nav-text">Prompt 範本</span></a></li>
+      <li><a href="#ch8" class=""><span class="nav-num">11</span><span class="nav-text">輸入輸出範例</span></a></li>
+      <li><a href="#ch10" class=""><span class="nav-num">12</span><span class="nav-text">最重要設計原則</span></a></li>
+    </ul>
+  </nav>
+</aside>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero" id="hero">
+  <span class="tag" spellcheck="false">獵才分案 · 推薦系統設計</span>
+  <h1 spellcheck="false">獵才分案優化：加入LLM Reranking 設計</h1>
+  <p class="lead" spellcheck="false">從傳統機器學習排序流程，演進到加入 LLM Reranking 的決策框架。</p>
+</div>
+
+<!-- Why LLM Reranking -->
+<section class="why-section" id="why">
+  <div class="why-hero">
+    <div class="small-label" spellcheck="false">資料條件比較</div>
+    <h2 spellcheck="false">為什麼要從 ML 轉到 LLM Reranking</h2>
+    <p class="sublead" spellcheck="false">獵才分案不是典型的大規模推薦——資料量小、決策因子複雜，許多判斷不是數字問題，而是<em>語意問題</em>。這種場景特性，正好是傳統 ML 較弱、LLM 較強的交界；分案要的不是優化全局指標的排序器，而是能讀懂案件本質、做出像主管的取捨。</p>
+  </div>
+
+  <div class="pros-cons">
+    <!-- 左：ML 的限制 -->
+    <div class="pc-card cons">
+      <div class="pc-label" spellcheck="false">─ 傳統 ML 的限制</div>
+      <h3 class="pc-title" spellcheck="false">約 1,200 筆案件 + 隱性標籤，不利於穩定排序模型</h3>
+      <ul>
+        <li spellcheck="false"><strong>樣本數偏少：</strong>容易過度擬合，特徵組合空間拉不開，難以涵蓋所有案件型態。</li>
+        <li spellcheck="false"><strong>Implicit Negative 模糊：</strong>未被選中的顧問不一定是「不適合」，可能只是「當時沒被想到」，模型難以分辨。</li>
+        <li spellcheck="false"><strong>標籤雜訊與時間偏差：</strong>治理資料受主管偏好、loading、缺案、團隊配置影響，可能讓模型學到的是「過往分派習慣」而非「適配邏輯」。</li>
+        <li spellcheck="false"><strong>難以特徵化的判斷：</strong>「產業相似但本質不同」「近期接觸過同類客戶」這類語意層面的取捨，幾乎無法工程化成特徵。</li>
+      </ul>
+    </div>
+
+    <!-- 右：LLM 的優勢 -->
+    <div class="pc-card pros">
+      <div class="pc-label" spellcheck="false">─ LLM Reranking 的優勢</div>
+      <h3 class="pc-title" spellcheck="false">資料量小、語意重時，LLM 比 ML 更像主管</h3>
+      <ul>
+        <li spellcheck="false"><strong>能吸收文字脈絡：</strong>職務描述、顧問經驗摘要、決策規則、案件難點，都能直接納入判斷，不需先轉成特徵。</li>
+        <li spellcheck="false"><strong>少樣本下的語意比較：</strong>在缺乏訓練資料時，仍能做出接近資深主管的取捨，因為它依賴的是語意理解，不是統計擬合。</li>
+        <li spellcheck="false"><strong>處理難以特徵化的判斷：</strong>「產業 ≠ 本質」「研發主管 ≠ 業務主管」「近期接觸」等隱性條件，可以用文字明確表達並執行。</li>
+        <li spellcheck="false"><strong>不取代而是分工：</strong>保留候選池與硬性資格邊界，Baseline Score 從傳統 ML 權重公式轉為 Embedding 語意相似度計算，再由 LLM 在既有候選集合內根據證據重排。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:18px;" spellcheck="false">傳統 ML 在大量資料、明確標籤的場景表現好；獵才分案則是偏向「小資料 × 語意取捨」的場景<font color="#c97a3e"><b>。
+  </b></font></div>
+</section>
+
+<!-- 流程對比 -->
+<section class="pipeline-section" id="pipeline">
+
+  <div class="why-hero">
+    <div class="small-label" spellcheck="false">框架對比 · BEFORE / AFTER</div>
+    <h2 spellcheck="false">兩者框架流程對比</h2>
+    <p class="sublead" spellcheck="false">上下對照可一眼看出 LLM Reranking 在哪幾個環節「接手」——前 4 步驟保留原本管線不變，差異發生在第 5～7 步的<em>新增節點</em>，最後仍由主管判斷是否採納。</p>
+  </div>
+
+  <div class="pipeline-grid">
+
+    <!-- 上：傳統機器學習排序流程 -->
+    <div class="pipeline-wrap before">
+      <div class="ph-row">
+        <span class="ph-name">傳統機器學習排序流程</span>
+        <span class="ph-tag">ML Baseline</span>
+      </div>
+      <div class="pipeline-flow">
+        <div class="pf-step"><span class="pf-num">1</span><span class="pf-text" spellcheck="false">案件進件JD</span></div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step"><span class="pf-num">2</span><span class="pf-text" spellcheck="false">案件需求結構化<br><font color="#555555">[案件資料-無語意]</font></span></div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step"><span class="pf-num">3</span><span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">候選池／水流／</span><br style="letter-spacing: 0.16px;"><span style="letter-spacing: 0.16px;">分派資格規則</span></span></div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step"><span class="pf-num">4</span><span class="pf-text" spellcheck="false">P1~P3硬規則+P4<br>ML socre產生初排</span></div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step"><span class="pf-num">5</span><span class="pf-text" spellcheck="false">輸出 Top N<br>顧問清單與分數</span></div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step"><span class="pf-num">6</span><span class="pf-text" spellcheck="false">完成推薦</span></div>
+      </div>
+    </div>
+
+    <!-- 下：加入 LLM Reranking 後 -->
+    <div class="pipeline-wrap after">
+      <div class="ph-row">
+        <span class="ph-name">加入 LLM Reranking 後</span>
+        <span class="ph-tag accent">差異流程</span>
+      </div>
+      <div class="pipeline-flow">
+        <div class="pf-step">
+          <span class="pf-num">1</span>
+          <span class="pf-text" spellcheck="false">案件進件JD</span>
+          <span class="pf-sub" spellcheck="false">取得職缺資訊與基本條件</span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step new">
+          <div class="pf-corner">📄</div>
+          <span class="pf-num">2</span>
+          <span class="pf-text" spellcheck="false">案件需求<br>語意結構化</span>
+          <span class="pf-sub" spellcheck="false">萃取本案核心成功條件、產業／職務／職級特徵等</span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step">
+          <span class="pf-num">3</span>
+          <span class="pf-text" spellcheck="false">候選池／水流／<br>分派資格規則</span>
+          <span class="pf-sub" spellcheck="false"><br></span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step new">
+          <div class="pf-corner">📄🏢👤</div>
+          <span class="pf-num">4</span>
+          <span class="pf-text" spellcheck="false">Embedding 相似度計算</span>
+          <span class="pf-sub" spellcheck="false">計算需求側與顧問向量相似度，產生初步排序</span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step">
+          <span class="pf-num">5</span>
+          <span class="pf-text" spellcheck="false">輸出 Top N<br>顧問清單與分數</span>
+          <span class="pf-sub" spellcheck="false"><br></span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step new">
+          <div class="pf-corner">📊</div>
+          <span class="pf-num">6</span>
+          <span class="pf-text" spellcheck="false">LLM reranking</span>
+          <span class="pf-sub" spellcheck="false">依案件本質與成功條件語料重新排序</span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step new">
+          <span class="pf-num">7</span>
+          <span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">輸出Final Top N</span><br style="letter-spacing: 0.16px;">+調整理由</span>
+          <span class="pf-sub" spellcheck="false"><br></span>
+        </div>
+        <span class="pf-arrow">→</span>
+        <div class="pf-step">
+          <span class="pf-num">8</span>
+          <span class="pf-text" spellcheck="false">完成推薦</span>
+          <span class="pf-sub" spellcheck="false"><br></span>
+        </div>
+      </div>
+
+      <div class="pf-info-grid">
+        <div class="pf-info-panel">
+          <div class="pf-info-title" spellcheck="false">資料包說明</div>
+          <div class="pf-pkg-row">
+            <div class="pf-pkg-icon">📄</div>
+            <div>
+              <div class="pf-pkg-name" spellcheck="false">[案件資料包]</div>
+              <div class="pf-pkg-desc" spellcheck="false">結構化本案資訊與核心成功條件，包含產業、職務、職級、客戶經營、限制條件等，供 Embedding 與 LLM 使用。</div>
+            </div>
+          </div>
+          <div class="pf-pkg-row">
+            <div class="pf-pkg-icon">🏢</div>
+            <div>
+              <div class="pf-pkg-name" spellcheck="false">[公司資料包]</div>
+              <div class="pf-pkg-desc" spellcheck="false">整理公司業務本質、產品／服務型態、價值鏈位置與公開資料補充，作為案件需求側語料與相鄰業務判斷來源。</div>
+            </div>
+          </div>
+          <div class="pf-pkg-row">
+            <div class="pf-pkg-icon">👤</div>
+            <div>
+              <div class="pf-pkg-name" spellcheck="false">[顧問能力包]</div>
+              <div class="pf-pkg-desc" spellcheck="false">彙整顧問過往經驗、擅長領域、成交紀錄、負載狀態等，作為顧問向量（Embedding）來源。</div>
+            </div>
+          </div>
+          <div class="pf-pkg-row">
+            <div class="pf-pkg-icon">📊</div>
+            <div>
+              <div class="pf-pkg-name" spellcheck="false">[候選顧問比較包]</div>
+              <div class="pf-pkg-desc" spellcheck="false">彙整初排 Top N 候選顧問針對此案件的各維度指標證據，供 LLM Reranking 比較使用。</div>
+            </div>
+          </div>
+        </div>
+        <div class="pf-info-panel">
+          <div class="pf-info-title" spellcheck="false">關鍵調整重點</div>
+          <div class="pf-key-item">
+            <span class="pf-key-num" spellcheck="false">1</span>
+            <span spellcheck="false">在 Embedding（步驟4）前，先建立「案件資料包」、「公司資料包」與「顧問能力包」。</span>
+          </div>
+          <div class="pf-key-item">
+            <span class="pf-key-num" spellcheck="false">2</span>
+            <span spellcheck="false">步驟4以案件與公司需求側語料 × 顧問能力包計算相似度，產生初步排序。</span>
+          </div>
+          <div class="pf-key-item">
+            <span class="pf-key-num" spellcheck="false">3</span>
+            <span spellcheck="false">步驟6由 LLM 在 Top N 內依成功條件做受控 reranking。</span>
+          </div>
+          <div class="pf-key-item">
+            <span class="pf-key-num" spellcheck="false">4</span>
+            <span spellcheck="false">步驟7輸出調整理由與風險，協助主管最終決策。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-note-bar">
+        <span class="pf-note-bar-icon" spellcheck="false">💡</span>
+        <span spellcheck="false">說明：Embedding 階段負責用案件／公司需求側語料與顧問能力包計算 Baseline Score；LLM Reranking 階段負責「判斷誰最符合本案核心成功條件並輸出最終排序」。</span>
+      </div>
+    </div>
+
+  </div>
+
+
+</section>
+
+<!-- TL;DR -->
+<div class="tldr" id="tldr">
+  <div class="label" spellcheck="false">差異說明</div>
+  <div class="quote" spellcheck="false">
+    LLM 不取代原來的候選池與硬性資格邊界；Baseline Score 從原先機器學習參數權重公式，改為用 LLM Embedding（語意向量）計算初始分數。<br>
+    接著再由 LLM 根據語意間的證據，在 Top N 內重新調整排序、說明理由，讓排序更接近人思考。
+  </div>
+</div>
+
+<!-- 整體架構 -->
+<h2 id="ch2" spellcheck="false">03 · 整體架構：<span style="letter-spacing: -0.01em;"> </span><span style="letter-spacing: -0.01em;">Input / Output 設計 (</span><span style="letter-spacing: -0.01em;">Embedding計算相似度 / LLM Reranking)</span><br></h2>
+<p spellcheck="false">LLM 每次看到的不是全公司資料，而是<strong>一份已經整理好的比較題</strong>。資料包不是把所有 JD、所有公司資料、所有顧問歷史案件一次丟給 LLM，而是拆成案件、公司、顧問與比較證據四個輸入層，再交由排序判斷規則約束。</p>
+
+<div class="arch-io-title" spellcheck="false">Reranking Input / Output 設計</div>
+<div class="arch-io-groups">
+  <div class="arch-io-group input-group" spellcheck="false">LLM 輸入</div>
+  <div class="arch-io-group output-group" spellcheck="false">LLM 輸出</div>
+</div>
+<div class="arch-flow">
+  <div class="arch-card l1">
+    <div class="arch-head">
+      <span class="arch-num">1</span>
+      <span class="arch-title" spellcheck="false">案件資料包</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">告訴 LLM：這個案子的本質是什麼</span>
+    <p class="arch-body" spellcheck="false">除了JD 摘要、表面分類外，還要有「本案核心成功條件」。</p>
+  </div>
+
+  <span class="arch-arrow">→</span>
+
+  <div class="arch-card l2">
+    <div class="arch-head">
+      <span class="arch-num">2</span>
+      <span class="arch-title" spellcheck="false">公司資料包</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">告訴 LLM：這家公司靠什麼創造價值</span>
+    <p class="arch-body" spellcheck="false">整理公司業務本質、價值鏈位置、產品／服務型態、相鄰業務與特殊確認點。</p>
+  </div>
+
+  <span class="arch-arrow">→</span>
+
+  <div class="arch-card l3">
+    <div class="arch-head">
+      <span class="arch-num">3</span>
+      <span class="arch-title" spellcheck="false">顧問能力包</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">告訴 LLM：顧問真正有什麼證據</span>
+    <p class="arch-body" spellcheck="false">整理顧問歷史案件、公司業務本質經驗、職務職級能力、成功證據、負載與風險。</p>
+  </div>
+
+  <span class="arch-arrow">→</span>
+
+  <div class="arch-card l4">
+    <div class="arch-head">
+      <span class="arch-num">4</span>
+      <span class="arch-title" spellcheck="false">候選顧問比較包</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">告訴 LLM：可以拿什麼證據比較人</span>
+    <p class="arch-body" spellcheck="false">不是只看分數，而是展開產業、公司本質、職務、相似案例、成交證據、負載與風險。</p>
+  </div>
+
+  <span class="arch-arrow">→</span>
+
+  <div class="arch-card l5">
+    <div class="arch-head">
+      <span class="arch-num">5</span>
+      <span class="arch-title" spellcheck="false">排序判斷規則</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">告訴 LLM：可以怎麼想、什麼不能推翻</span>
+    <p class="arch-body" spellcheck="false">硬規則、案件本質判斷、分數使用、治理因素介入時機與輸出格式，限制 LLM 決策邊界。</p>
+  </div>
+
+  <span class="arch-arrow">→</span>
+
+  <div class="arch-card l6">
+    <div class="arch-head">
+      <span class="arch-num">6</span>
+      <span class="arch-title" spellcheck="false">LLM 輸出</span>
+    </div>
+    <span class="arch-pill" spellcheck="false">給可追蹤的決策理由</span>
+    <p class="arch-body" spellcheck="false">Top 3~5 排序、推薦理由、差異、風險與主管確認事項。</p>
+  </div>
+</div>
+
+
+<!-- 第一層 -->
+<h2 id="ch3" spellcheck="false">04 · 第一層：案件資料包</h2>
+<p spellcheck="false">案件資料包的目的，是讓 LLM 先知道：<strong>這個案子的本質到底是什麼</strong>。它不只是 JD 摘要，除了「表面分類」外，還要有「核心成功條件」。</p>
+
+<div class="schema-example-grid">
+  <div class="se-col">
+    <h4 class="se-title" spellcheck="false">📋 結構化欄位定義 <span style="font-weight: normal;">(下為舉例，會依照實務增減篩選)</span></h4>
+    <div class="se-fields">
+      <div class="se-section-label">一、案件原始需求</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">案件產業</div><div class="se-field-source" spellcheck="false">案件原始資料</div><div class="se-field-desc" spellcheck="false">產業分類與文字描述；僅作表層分類，不取代公司業務本質判斷</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務名稱 / 描述</div><div class="se-field-source" spellcheck="false">JD / 職缺資料</div><div class="se-field-desc" spellcheck="false">原始職缺名稱、職責描述、任務線索與限制條件</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務類型 / 職務本質</div><div class="se-field-source" spellcheck="false">JD + 職務智識庫</div><div class="se-field-desc" spellcheck="false">業務、研發、財務、人資、營運、供應鏈等；需判斷此職務實際功能本質</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職級 / 管理層級</div><div class="se-field-source" spellcheck="false">JD / 案件欄位</div><div class="se-field-desc" spellcheck="false">專員、主管、經理、總監、高階主管；含是否帶人、是否跨部門協調</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">客戶價值 / 限制條件</div><div class="se-field-source" spellcheck="false">案件原始資料</div><div class="se-field-desc" spellcheck="false">是否大客戶、重要客戶、長期經營客戶；同時保留地區、語言、排除條件等限制</div></div>
+      <div class="se-section-label">二、公司資料包引用</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">本案採用的公司側語料<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包</div><div class="se-field-desc" spellcheck="false">採用公司業務本質、價值鏈位置、產品 / 服務型態與相鄰業務本質，作為需求側語料</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">公司側特殊確認點<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包</div><div class="se-field-desc" spellcheck="false">引用 special_confirmation_points；只作主管確認、加分證據或風險提醒，不直接併入主相似度</div></div>
+      <div class="se-section-label">三、職務輪廓補充</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務輪廓補充<font color="#c97a3e" style="font-weight: normal;">(註2)</font></div><div class="se-field-source" spellcheck="false">職務智識庫</div><div class="se-field-desc" spellcheck="false">這類職務在市場上通常做什麼、需要哪些 hard skills、常見背景與招募難點</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務特殊確認點<font color="#c97a3e" style="font-weight: normal;">(註2)</font></div><div class="se-field-source" spellcheck="false">JD + 職務智識庫</div><div class="se-field-desc" spellcheck="false">特定認證、法規、製程、工具、客戶場景；是否為核心條件需在複合判斷中說明</div></div>
+      <div class="se-section-label">四、公司 × 職務複合判斷</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">本案公司 × 職務判斷</div><div class="se-field-source" spellcheck="false">案件資料包產生流程</div><div class="se-field-desc" spellcheck="false">判斷這個職務放在這家公司時，哪些能力會變得重要；不是單看公司，也不是單看職稱</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">本案核心成功條件<span style="color: rgb(201, 122, 62); font-weight: normal;">(註3)</span></div><div class="se-field-source" spellcheck="false">LLM 假設輸出</div><div class="se-field-desc" spellcheck="false">這個「職務」在這家「公司」要成功，需要什麼顧問經驗；需標示信心與待驗證事項</div></div>
+    </div>
+  </div>
+  <div class="se-col">
+    <h4 class="se-title" spellcheck="false">📄 實際範例：半導體設備公司 — 研發主管</h4>
+    <pre class="light" spellcheck="false"><pre class="light" spellcheck="false" style="border-color: rgb(226, 220, 204); border-style: solid; border-width: 1px; border-image: none 100% / 1 / 0 stretch; letter-spacing: 0.16px; app-region: no-drag !important;">【案件資料包】
+
+案件名稱：
+半導體設備公司 — 研發主管
+
+一、原始職缺摘要
+客戶為半導體設備製造商，需招募一位研發主管，
+負責機構設計團隊管理、跨部門產品開發協作，
+並需具備與客戶端技術窗口溝通的經驗。
+
+二、結構化欄位
+- 產業：半導體設備 / 精密機械 / 科技製造
+- 職務：研發主管 / 技術主管 / 機構設計管理
+- 職級：經理級以上
+- 是否高階主管：是
+- 是否技術職：是
+- 是否業務職：否
+- 客戶價值：中高
+- 案件難度：偏高
+
+三、公司資料包引用 / 本案採用公司側語料
+- 公司資料包版本：company_business_profile vX（依實際公司資料包帶入）
+- 公司業務本質：B2B 半導體設備研發製造商
+- 價值鏈位置：半導體供應鏈上游設備供應商
+- 核心產品 / 服務：設備研發、機構設計、設備製造、客戶端導入
+- 相鄰業務本質：精密機械、自動化設備、科技製造設備商
+- 公司側特殊確認點：特定製程、機台、客戶端設備驗證待確認
+
+四、職務輪廓補充
+典型工作內容：
+1. 帶領研發或機構設計團隊
+2. 負責產品設計、技術開發與設計審查
+3. 協調研發、製造、業務與客戶端技術需求
+4. 處理產品開發過程中的技術問題與時程管理
+
+常見 Hard Skills / 專業背景：
+1. 機構設計
+2. 設備研發
+3. 精密機械或自動化設備經驗
+4. 產品開發流程管理
+5. 技術團隊管理
+6. 客戶端技術溝通
+
+<font color="#c97a3e">五、公司 × 職務複合判斷與本案核心成功條件<br>本案引用的公司資料包顯示，這家公司本質是設備研發製造商，
+不只是一般半導體產業公司；本案職務也不是一般研發職，而是需要帶領技術團隊、
+處理產品開發、跨部門協作與客戶端技術溝通的研發主管。
+因此，顧問是否熟悉「技術研發型設備公司的人才結構」非常重要。
+1. 研發主管、技術主管或機構設計管理經驗優先。
+2. 半導體設備、精密機械、自動化設備或設備研發相關經驗加分。
+3. 若產業經驗與職務經驗衝突，優先看「研發主管 / 技術管理 / 設備研發」相關經驗。
+4. 顧問若只有半導體業務、代理、通路或一般科技製造經驗，不應視為完全貼合。
+5. 若顧問曾成功處理技術主管、研發管理、設備工程或機構設計主管案件，應提高排序。</font><br></pre></pre>
+  </div>
+</div>
+
+<div class="callout" spellcheck="false"><font color="#c97a3e"><b>案件資料包註記：</b></font><div><font color="#c97a3e"><b>註1：公司側語料引用：</b></font><span style="color: rgb(201, 122, 62);">公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點由「公司資料包」維護，<u>由</u></span><span style="letter-spacing: 0.16px;"><u style=""><font color="#2c5282">【B端智識庫 API】補足</font></u></span><span style="color: rgb(201, 122, 62); letter-spacing: 0.01em;">；案件資料包只引用版本與本案採用內容，不重新定義公司主檔。</span></div><div><font color="#c97a3e"><b>註2：職務輪廓補充：</b>保留在案件資料包，由 JD 與</font><u style=""><font color="#c97a3e">【</font><font color="#2c5282">職務智識庫 API】補足</font><font color="#c97a3e">，</font></u><font color="#c97a3e">用來判斷這個職務在市場上的實際功能、hard skills 與招募難點。</font></div><div><span style="color: rgb(201, 122, 62);"><b>註3：本案核心成功條件：</b>保留在案件資料包，由 LLM 依「公司資料包引用 + JD + 職務輪廓補充」產出假設，需標示信心程度與待驗證事項。</span></div></div>
+
+<!-- 第二層：公司資料包 -->
+<h2 id="ch3a" spellcheck="false">05 · 第二層：公司資料包</h2>
+<p spellcheck="false">公司資料包的目的，是把「公司到底靠什麼創造價值」整理成可比對、可追溯的語料。它不是公司介紹頁，而是案件資料包與顧問能力包之間的公司側橋梁：提供公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點。</p>
+
+<div class="collapsible-block">
+  <input class="collapsible-state" type="checkbox" id="companyPackageToggle" aria-controls="company-package-schema" aria-label="展開或收合公司資料包欄位與範例">
+  <label class="collapsible-toggle collapsible-toggle-top" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="true">
+    <span>收合公司資料包欄位與範例</span>
+    <span class="collapsible-toggle-icon" aria-hidden="true">↑</span>
+  </label>
+<div class="collapsible-content" id="company-package-schema">
+<div class="schema-example-grid company-package-grid">
+  <div class="se-col">
+    <h4 class="se-title" spellcheck="false">🏢 結構化欄位定義</h4>
+    <div class="se-fields">
+      <div class="se-section-label">一、主匹配語料</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">公司業務本質</div><div class="se-field-source" spellcheck="false">歷史案件庫 + B 端智識庫&nbsp;</div><div class="se-field-desc" spellcheck="false">對應 company_business_nature_initial；描述公司實際靠什麼產品、服務或技術創造價值</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">價值鏈位置</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">B 端智識庫</span></div><div class="se-field-desc" spellcheck="false">對應 value_chain_position_initial；例如上游設備、製造商、品牌商、通路商、平台商</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">產品 / 服務型態</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">B 端智識庫&nbsp;</span></div><div class="se-field-desc" spellcheck="false">對應 product_service_type_initial；供案件需求側語料與顧問供給側語料鏡像比對</div></div>
+      <div class="se-section-label">二、相鄰與確認點</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">相鄰業務本質</div><div class="se-field-source" spellcheck="false">LLM 分析 + 語意規則</div><div class="se-field-desc" spellcheck="false">對應 adjacent_business_nature；可加權比對，但不得直接等同核心公司本質</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">特殊確認點</div><div class="se-field-source" spellcheck="false">JD / 公司資料</div><div class="se-field-desc" spellcheck="false">對應 special_confirmation_points；不進主相似度，只作風險、加分證據或主管確認事項</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">特殊關鍵字偵測</div><div class="se-field-source" spellcheck="false">原始文字偵測</div><div class="se-field-desc" spellcheck="false">對應 special_keyword_hits；含通用噪音，僅供提醒，策劃後以特殊確認點為準</div></div>
+      <div class="se-section-label">三、來源與可信度</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">公開資料來源</div><div class="se-field-source" spellcheck="false">公開資料補充</div><div class="se-field-desc" spellcheck="false">對應 external_source_name / external_source_url；未補完則標待補或待查核</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">員工數 / 資本額</div><div class="se-field-source" spellcheck="false">公開資料補充</div><div class="se-field-desc" spellcheck="false">對應 employee_count / capital_amount；查不到或來源衝突需標待查核</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">信心標記</div><div class="se-field-source" spellcheck="false">資料品質檢查</div><div class="se-field-desc" spellcheck="false">對應 profile_confidence；區分內部推導、公開資料初補與公開資料確認</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">補資料優先序</div><div class="se-field-source" spellcheck="false">案件數統計</div><div class="se-field-desc" spellcheck="false">對應 enrichment_priority；P1 / P2 / P3 用於排定公開資料補強順序</div></div>
+    </div>
+  </div>
+  <div class="se-col">
+    <h4 class="se-title" spellcheck="false">🏢 實際範例：鴻XXXX業股份有限公司</h4>
+    <pre class="light" spellcheck="false">【公司資料包】
+
+公司名稱：
+鴻XXXX業股份有限公司
+
+
+一、資料來源範圍：
+- 內部案件資料：Consultant_history.xlsx；historical_cases.xlsx
+- 公開資料來源：XX官方集團簡介；台灣公司資料查詢網
+- 來源 URL：
+  https://www.fXXXn.com.tw/zh-tw/about/group-profile
+  https://www.comptw.com/item/04XXXX
+
+
+二、主匹配語料
+- 公司業務本質：
+  全球 EMS 與高科技製造服務企業；以電子代工服務、
+  全球製造與服務據點、四大產品領域，以及電動車、
+  數位健康、機器人、AI、半導體、新世代通訊布局創造價值。
+- 價值鏈位置：
+  全球電子製造服務商 / 系統組裝與零組件供應鏈 /
+  新興科技解決方案提供者。
+- 產品 / 服務型態：
+  消費性電子、雲端網路、電腦終端、元件及其他產品，
+  並延伸至電動車、數位健康、機器人與半導體相關服務。
+
+三、公開資料補充
+- public_description：
+  官方集團簡介載明為 EMS 領域全球第一，涵蓋
+  消費性電子、雲端網路、電腦終端、元件及其他四大產品領域，
+  並推動三加三長期策略。
+- employee_count：
+  全球員工季節性高峰約900,000人（官方集團簡介）。
+- capital_amount：
+  公司登記資本額 NT$138,917,408,530（2025-09-04）；
+  稅籍資本額 NT$139,642,222,940，待統一採用基準。
+
+四、歷史案件語料線索
+- case_industry_top：消費性電子產品製造業
+- case_industry_summary：消費性電子產品製造業 44
+- division_industry_summary：科技 44
+- customer_type_summary：有統編B端客戶 44
+- top_job_categories：
+  採購主管 6；硬體工程研發主管 6；專案管理主管 3；
+  生產管理主管 3；資材主管 3；軟體工程師 3；
+  投資經理人 2；電子工程師 2。
+- case_status_summary：
+  成交歸檔 29；進行中 11；保證期 3；未成交歸檔 1。
+
+五、相鄰與特殊確認點
+- adjacent_business_nature：
+  電子代工(EMS/ODM)／半導體封測／伺服器與雲端硬體／
+  電動車(EV)零組件／ICT系統組裝。
+- special_keyword_hits：
+  法規；認證；稽核；品保；QA；品質；供應鏈；生管；生產；
+  海外；越南；半導體；IC；軟體；研發。
+- special_confirmation_points：
+  車用 IATF16949、ISO9001、電子業RBA行為準則為確認點；
+  EV/半導體/數位健康等新事業之專屬法規須依事業群確認。
+- 使用提醒：
+  上述關鍵字只作為確認線索，不直接等同核心公司業務本質。
+
+六、資料限制與待驗證
+- 資本額有公司登記與稅籍資料差異，正式版需指定採用口徑。
+- 本筆為 P1 公開資料初補；正式進入推薦模型前，仍建議抽樣人工複核
+  來源頁、公司名稱同一性與人數 / 資本額口徑。</pre>
+  </div>
+</div>
+  </div>
+  <div class="collapsible-fade" aria-hidden="true"></div>
+  <label class="collapsible-toggle collapsible-toggle-bottom" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="true">
+    <span>展開公司資料包欄位與範例</span>
+    <span class="collapsible-toggle-icon" aria-hidden="true">↓</span>
+  </label>
+</div>
+
+<div class="callout" spellcheck="false"><strong>公司資料包使用界線：</strong>主匹配語料包含公司業務本質、價值鏈位置、產品／服務型態與相鄰業務本質；特殊確認點需獨立分層，不直接併入主相似度。公司資料包負責維護公司側 canonical source，資料可來自歷史案件庫、B 端智識庫 API 與公開資料補充；案件資料包只引用其版本與本案採用語料，不得在案件層重新改寫公司主檔，也不得推翻候選池、部門池、水流或分派資格規則。</div>
+
+<!-- 第三層：顧問能力包 -->
+<h2 id="ch3b" spellcheck="false">06 · 第三層：顧問能力包</h2>
+<p spellcheck="false">顧問能力包的目的，是讓系統對每位候選顧問產生<strong>立體的能力輪廓認識</strong>——不是只看一個總分，而是知道此顧問真正擅長哪些產業、公司業務本質、價值鏈位置、職務本質與職級，以及哪些推論不成立。完整分析版提供 PM、主管與 LLM Reranking 閱讀，同時是 Embedding 語料版的上游來源——正式語料版（v2）依同一套語意匹配規則，由完整分析版萃取產出（完整分析版 → 語料版 → embedding），而非直接從歷史統計生成。</p>
+
+<div class="collapsible-block">
+  <input class="collapsible-state" type="checkbox" id="consultantPackageToggle" aria-controls="consultant-package-schema" aria-label="展開或收合顧問能力包欄位與範例">
+  <label class="collapsible-toggle collapsible-toggle-top" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="true">
+    <span>收合欄位與範例</span>
+    <span class="collapsible-toggle-icon" aria-hidden="true">↑</span>
+  </label>
+<div class="collapsible-content" id="consultant-package-schema">
+<div class="schema-example-grid">
+  <div class="se-col">
+    <h4 class="se-title" spellcheck="false">📋 結構化欄位定義</h4>
+    <div class="se-fields">
+      <div class="se-section-label">一、顧問基本輪廓</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主要角色</div><div class="se-field-source" spellcheck="false">顧問歷史案件庫</div><div class="se-field-desc" spellcheck="false">承辦為主 / 合作為主 / 混合 / 資料不足</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主要案件狀態</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">已成交 / 推薦成功 / 進行中 / 未成交；僅依實際欄位判斷</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主要分工產業</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">科技 / 非科技 / 混合 / 資料不足</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">能力輪廓集中度</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">高度集中 / 中度集中 / 分散</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">基本摘要</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">3～5 句整體能力輪廓描述，需標示可支持與不可外推處</div></div>
+      <div class="se-section-label">二、產業能力輪廓</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">產業經驗摘要</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫 + LLM 分析</div><div class="se-field-desc" spellcheck="false">主要產業、次要產業、案件量與成功證據摘要</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">有成功證據產業</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">成交 / 推薦成功 / 近期成功案例；不得自行推論</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">僅接觸產業</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">曾接觸但不宜視為強項的產業與原因</div></div>
+      <div class="se-section-label">三、公司業務本質輪廓</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">歷史公司業務本質</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫 +B端智識庫</div><div class="se-field-desc" spellcheck="false">顧問熟悉的公司運作方式、人才結構與職缺需求</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">產品 / 服務型態</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫<span style="letter-spacing: 0.16px;">+B端智識庫</span></div><div class="se-field-desc" spellcheck="false">補足產業分類過粗的問題，供案件資料包鏡像比對</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">價值鏈位置</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫<span style="letter-spacing: 0.16px;">+B端智識庫</span></div><div class="se-field-desc" spellcheck="false">製造商 / 品牌商 / 通路商 / 服務提供者 / 平台商等</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">客戶 / 通路型態</div><div class="se-field-source" spellcheck="false">歷史案件庫<span style="letter-spacing: 0.16px;">+B端智識庫</span></div><div class="se-field-desc" spellcheck="false">主要客戶與通路型態（大型企業 / 製造客戶 / 通路 / 消費者等）；供相鄰判斷與下游客戶通路確認點使用</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">相鄰業務本質經驗</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">說明相近處與不可外推處，不得直接等同</div></div>
+      <div class="se-section-label">四、職務能力輪廓</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務 / 職類經驗摘要</div><div class="se-field-source" spellcheck="false">&nbsp;LLM 分析</div><div class="se-field-desc" spellcheck="false">主要 / 次要職務類型、案件量與成功證據摘要</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">歷史職務本質</div><div class="se-field-source" spellcheck="false">職務智識庫</div><div class="se-field-desc" spellcheck="false">技術職 / 業務職 / 財務職 / 人資職 / 營運職等功能本質</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">特殊條件與確認點</div><div class="se-field-source" spellcheck="false">顧問歷史案件庫 + LLM 分析</div><div class="se-field-desc" spellcheck="false">認證、法規、製程、機台、產品規格或年資條件；無證據時列待確認</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">不宜過度推論職務</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">無充分成功證據的職務與原因</div></div>
+      <div class="se-section-label">五、職級能力輪廓</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職級經驗摘要</div><div class="se-field-source" spellcheck="false">&nbsp;LLM 分析</div><div class="se-field-desc" spellcheck="false">專員 / 工程師 / 資深職 / 基層主管 / 中階主管 / 高階主管</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">可處理職級範圍</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">依資料判斷，不能用職稱字面過度外推</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主管職成功證據</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">是否偏主管職、是否有高階主管成功證據；不足則標資料不足</div></div>
+      <div class="se-section-label">六、成功經驗證據</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">相似案件與推薦 / 成交證據</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">客戶 / 產業 / 職務 / 職級 / 成功結果；不得由 LLM 捏造</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">成功模式</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">哪些條件組合下較能支持推薦</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">近期成功經驗</div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">顧問</span>歷史案件庫</div><div class="se-field-desc" spellcheck="false">近一年或近兩年的成功模式；不可判斷則標資料不足</div></div>
+      <div class="se-section-label">七、主要優勢</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主要優勢</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">最應被推薦的 3 個理由</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">優勢摘要</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">2～3 句說明最適合被推薦的原因</div></div>
+      <div class="se-section-label">八、主要風險與不可過度推論</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">能力 / 資料風險</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">顧問能力或資料風險；資料不足也需明確標記</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">不可過度推論</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">特定產業、職務或細項條件不能直接等同於全面適配</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">資料限制</div><div class="se-field-source" spellcheck="false">資料品質檢查</div><div class="se-field-desc" spellcheck="false">缺少 JD、推薦成功資訊、期間或樣本不足等限制</div></div>
+      <div class="se-section-label">九、適合優先推薦案件類型</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">適合產業 / 業務本質</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">未來可優先考慮的產業與公司業務本質</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">適合職務 / 職級</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">適合職務、適合職級與適合案件摘要</div></div>
+      <div class="se-section-label">十、需保守看待案件類型</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">保守看待產業 / 職務 / 職級</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">不能直接推論適合的案件類型與原因</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">保守特殊條件</div><div class="se-field-source" spellcheck="false">LLM 分析</div><div class="se-field-desc" spellcheck="false">法規、品質系統、製程、機台或產品標準；多數應列為確認點</div></div>
+      <div class="se-section-label">十一、顧問能力標籤</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">能力標籤</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">產業、公司業務本質、職務、職級、成功經驗、特殊確認點與風險標籤</div></div>
+      <div class="se-section-label">十二、信心與資料限制</div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">分析信心</div><div class="se-field-source" spellcheck="false">LLM 產出</div><div class="se-field-desc" spellcheck="false">高 / 中 / 低，需說明主要依據</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">主要依據與限制</div><div class="se-field-source" spellcheck="false">資料品質檢查</div><div class="se-field-desc" spellcheck="false">案件量、成交證據、推薦成功、JD 摘要、職務分類、公司業務本質與缺口</div></div>
+    </div>
+  </div>
+  <div class="se-col">
+    <div class="se-title-row">
+      <h4 class="se-title" spellcheck="false">👤 實際範例：吳XX顧問</h4>
+      <div class="prompt-tip-group" aria-label="顧問能力包 prompt tips">
+        <button type="button" class="prompt-tip" data-prompt-tip="full" aria-haspopup="dialog">完整分析版</button>
+        <button type="button" class="prompt-tip" data-prompt-tip="embedding" aria-haspopup="dialog">Embedding 語料版</button>
+      </div>
+    </div>
+    <pre class="light" spellcheck="false">【顧問能力包｜完整分析版】
+
+顧問姓名：吳XX
+顧問 ID：99250005
+能力包版本：顧問能力包 prompt v1
+
+資料範圍：
+- 歷史案件數：131 筆，且 131 個不重複 CAID
+- 案件成立日：2020/07/16 17:19 至 2026/05/11 14:22
+- 有 Offer 日期案件：119 筆
+- 資料限制：缺少獨立推薦成功欄位、目前負載、
+  主管評價、完整推薦過程與最新可承接狀態
+
+一、顧問基本輪廓
+- 主要角色：承辦為主。131 筆中，承辦顧問 123 筆，
+  合作顧問 8 筆。
+- 主要案件狀態：以成交 / Offer 紀錄為主。119 筆有
+  Offer 日期；成交歸檔 94 筆，保證期 10 筆，
+  進行中 18 筆，未成交歸檔 3 筆。
+- 主要分工產業：非科技為主。非科 120 筆，科技 11 筆。
+- 能力輪廓集中度：高度集中於紡織成衣、服飾 /
+  軟性商品、B2B 製造與外銷供應鏈。
+
+基本摘要：
+吳XX的歷史案件明顯集中在非科技產業，尤其是
+紡織成衣與相關供應鏈。她有大量 Offer / 成交證據，
+且多數案件是承辦顧問，不只是零星合作參與。職務能力
+集中在成衣外銷、國外業務、供應鏈 / 生產管理、財會
+與人資等 B2B 營運型職缺。高階主管案件有成功證據，
+但應限定在相近產業與職務本質使用。
+
+二、產業能力輪廓
+主要產業：
+1. 紡織成衣業：63 筆，58 筆有 Offer / 成功證據。
+2. 紡織 / 服飾 / 軟性商品相關產業：
+   其他紡織製品製造業 6 筆 / 6 筆成功，
+   鞋類 / 布類 / 服飾品批發業 6 筆 / 6 筆成功。
+3. B2B 製造、批發代理與消費品供應鏈：
+   農畜水產品批發業 6 筆 / 5 筆成功，
+   其他食品製造業 5 筆 / 4 筆成功。
+
+有成功證據的產業：
+- 紡織成衣業：58 筆 Offer / 成功證據。
+- 其他紡織與紡織製品：多筆成功，包含研發主管、
+  國外業務、業務副總 / 外派經營管理主管。
+- 電腦及其週邊設備製造業：有 Sales PM、品保高階
+  主管 / 專案經理等成功或 Offer 紀錄，但案件量較低。
+
+僅接觸但不宜視為強項的產業：
+- 建築工程業：1 筆進行中，無 Offer 成功證據。
+- 塑膠製品製造業：1 筆進行中，無 Offer 成功證據。
+- 半導體、IC 設計或深度硬體研發：無足夠相似證據。
+
+產業能力摘要：
+吳XX最有把握的產業範圍是紡織成衣、服飾 /
+軟性商品、外銷供應鏈與相關 B2B 製造 / 批發場景。
+科技製造、建築、塑膠與電機工程雖有接觸或個別案例，
+但不應視為主要強項。
+
+三、公司業務本質輪廓
+常見公司業務本質：
+1. 紡織成衣製造商 / 成衣供應鏈公司
+2. 服飾、布料、軟性商品批發或代理商
+3. B2B 製造與外銷導向公司
+4. 食品、農畜水產品、綜合商品等非科技 B2B 企業
+
+常見價值鏈位置：
+- 製造商
+- 成衣 / 紡織供應鏈服務者
+- 批發代理商
+- 海外生產 / 外銷供應鏈節點
+
+常見產品 / 服務型態：
+- 成衣、布料、紡織品、軟性商品
+- 外銷訂單、品牌客戶接單、打樣、大貨、生產與交付管理
+- 食品 / 農畜水產品等實體商品
+- 人資、財會、營運管理等企業內部職能服務
+
+相鄰業務本質辨識：
+- 可支持軟性材料、非科技製造、工廠端營運、
+  供應鏈與生產管理案件。
+- 不織布、衛材、口罩、濕紙巾或日用品製造可視為
+  部分相鄰，但仍需確認製程、法規與認證條件。
+- 不可直接等同具備 ISO22716、化妝品 GMP 或 HACCP 經驗。
+
+公司業務本質摘要：
+此顧問較熟悉以實體產品、外銷訂單、生產交付與
+跨部門協作為核心的公司。其資料較能支撐 B2B 製造、
+成衣供應鏈、批發代理與海外營運場景；不宜因少量
+科技案件就推論熟悉半導體、純軟體或深度研發公司。
+
+四、職務能力輪廓
+主要職務類型：
+1. 國外業務 / 成衣業務 / 外銷業務：
+   國外業務 33 筆，32 筆有成功證據；
+   國外業務主管 6 筆，5 筆有成功證據。
+2. 財會 / 會計 / 成本會計：
+   財務或會計主管 10 筆，10 筆成功；
+   主辦會計 5 筆，5 筆成功。
+3. 生產 / 生管 / 供應鏈 / 營運管理：
+   生管 6 筆，5 筆成功；
+   生產管理主管 5 筆，5 筆成功。
+
+次要職務類型：
+- 人資主管 / 人資人員 / 教育訓練
+- Sales PM、MIS、專案經理、QA / 品保
+
+職務本質偏向：
+- 業務職：國外業務、成衣業務、外銷 / 品牌客戶對接。
+- 營運職：生產、生管、供應鏈、海外生產管理。
+- 財務職：會計主管、主辦會計、成本會計、財務分析。
+- 人資職：HR、HRBP、HRD、教育訓練。
+
+特殊條件與確認點：
+- 明確可引用：品保 / QA、品質控管、外部稽核、
+  職安衛、越南廠會計帳務、製造成本、當地稅法、
+  車用螺絲 IATF16949 個案。
+- 資料未明確出現：ISO22716、化妝品 GMP、HACCP、
+  不織布、衛材、濕紙巾、口罩或日用品製造。
+
+職務能力摘要：
+能力核心不是單一職稱，而是「非科技 B2B / 紡織成衣
+供應鏈中的商務、營運、財會與人資職能」。技術研發、
+半導體設備與純科技工程管理不應直接外推。
+
+五、職級能力輪廓
+- 主要職級：
+  中階主管 43 筆，41 筆有成功證據；
+  資深職位 38 筆，34 筆有成功證據；
+  專員 / 管理師 / 工程師 18 筆，17 筆有成功證據。
+- 是否偏主管職：部分是。中階主管、基層主管與
+  高階主管合計 64 筆。
+- 高階主管成功證據：有，但需保守。高階主管 10 筆中
+  5 筆有 Offer / 成功證據。
+
+職級能力摘要：
+最穩定職級落在資深職到中階主管，並能處理部分基層
+主管與一般職。高階主管需限於紡織、外銷、營運管理
+或 B2B 管理場景。
+
+六、成功經驗證據
+代表成功案例：
+1. 遠東新世紀 / 紡織成衣業 / 總經理 / 副總經理 /
+   高階主管 / Offer 日期 2023/10/30。
+2. Sintex International / 紡織成衣業 / 策略專案經理 /
+   供應鏈資深經理 / 資深職位 / Offer 日期 2026/04/01。
+3. Fownes Brothers / 紡織成衣業 / Operation Manager /
+   中階主管 / Offer 日期 2023/11/27。
+4. 福基創新材料 / 其他紡織業 / 業務副總 /
+   外派經營管理主管 / 高階主管 / Offer 日期 2026/03/02。
+5. 源甡 / 紡織成衣業 / 海外生管主管 /
+   中階主管 / Offer 日期 2026/04/22。
+
+成功模式：
+- 紡織成衣 / 軟性商品供應鏈中的國外業務、成衣業務、
+  品牌客戶對接與外銷職務。
+- 非科技 B2B 製造公司中的生管、生產管理、供應鏈、
+  品質與營運主管。
+- 製造業或 B2B 公司中的財會主管、主辦會計、成本會計。
+- 紡織 / 非科技場景中的人資、HRD、教育訓練與 HRBP。
+
+近期成功經驗：
+- 2025 年 34 筆案件，其中 28 筆有 Offer / 成功證據。
+- 2026 年截至 2026/05/11 有 13 筆案件，其中 7 筆
+  有 Offer / 成功證據。
+
+七、主要優勢
+1. 在紡織成衣、服飾 / 軟性商品、外銷供應鏈案件中
+   有高案件量與高 Offer / 成功證據。
+2. 對非科技 B2B 公司的人才結構較熟，涵蓋業務、
+   供應鏈、生產、財會、人資等營運職能。
+3. 中階主管、資深職、一般職與基層主管皆有穩定
+   成功證據，可支援較廣職級範圍。
+
+八、主要風險與不可過度推論處
+主要風險：
+1. 資料未提供獨立推薦成功欄位，不能把所有 Offer 或
+   成交歸屬直接等同於完整推薦流程成功。
+2. 高階主管雖有成功案例，但需限定在相近產業與職務本質。
+3. 科技案件僅 11 筆，不足以支撐廣泛科技研發、
+   半導體主管或純軟體平台案件推論。
+
+不可過度推論：
+- 不能因為有紡織成衣成功經驗，就推論適合所有製造業。
+- 不能因為有少量科技製造成功案例，就推論適合半導體
+  設備研發主管、IC 設計或硬體研發主管案。
+- 不能因為有高階主管成功案例，就推論適合所有 C-level。
+- 不能因為有 HR 成功案例，就推論適合所有人資長或
+  組織轉型型高階 HR 案。
+
+資料限制：
+- 無目前負載、近期可承接量與缺案狀態。
+- 無主管評價、候選人品質、推薦過程與面試後回饋。
+- 無獨立推薦成功欄位。
+- 部分職務分類空白，高階分類欄位皆為空白。
+
+九、適合優先推薦案件
+適合產業：
+- 紡織成衣業
+- 服飾、布料、軟性商品製造 / 批發 / 代理
+- 非科技 B2B 製造與外銷供應鏈
+- 食品、農畜水產品、綜合商品等 B2B 營運型公司
+
+適合公司業務本質：
+- 成衣 / 紡織供應鏈公司
+- 外銷導向 B2B 製造商
+- 有海外生產、品牌客戶對接、接單、打樣、大貨、
+  生產交付需求的公司
+
+適合職務：
+- 國外業務、成衣業務、成衣業務主管
+- 生管、生產管理主管、供應鏈 / 營運管理
+- 財務或會計主管、主辦會計、成本會計
+- 人資主管、人資人員、HRD、教育訓練
+
+適合職級：
+- 資深職、基層主管、中階主管
+- 一般職員 / 專員級也可處理
+- 高階主管需限於相近產業與職務本質
+
+十、需保守看待案件類型
+需保守看待產業：
+- 半導體、IC 設計、半導體設備、純硬體研發
+- 建築工程、塑膠研發或純研發型製造
+- 高度軟體產品、平台或網路服務公司
+
+需保守看待職務：
+- 純研發主管、IC / 硬體 / 半導體設備工程主管
+- 電機工程、充電樁安裝工程等工程技術職
+- 跨產業 C-level
+- 成長行銷、訂閱制、數位產品等 ToC 成長職務
+
+需保守看待的特殊條件：
+- ISO22716、化妝品 GMP、HACCP
+- 不織布、衛材、濕紙巾、口罩或日用品製造
+- 特定製程、機台、產品標準或法規要求
+
+保守原因：
+上述類型在資料中要不是案件量少，要不是缺乏明確
+Offer / 成功證據，或與主要成功模式的公司業務本質
+差距較大。若要推薦，應先確認更細的相似案例、
+候選人來源能力、主管偏好與近期承接狀態。
+
+十一、顧問能力標籤
+產業標籤：紡織成衣、服飾 / 布料 / 軟性商品、
+非科技 B2B 製造、外銷供應鏈。
+公司業務本質標籤：B2B 製造商、成衣供應鏈、
+外銷導向公司、批發 / 代理商、海外生產節點。
+職務標籤：國外業務、成衣業務、生產 / 生管、
+供應鏈 / 營運管理、財會 / 成本會計、人資 / HRD。
+職級標籤：資深職、中階主管、基層主管、專員 /
+管理師、高階主管（限定相近場景）。
+特殊確認點標籤：IATF16949 個案、越南廠帳務、
+ISO22716 資料未提供、化妝品 GMP 資料未提供、
+HACCP 資料未提供。
+風險標籤：科技研發外推風險、高階主管外推風險、
+推薦成功欄位缺漏、目前負載資料缺漏。
+
+十二、信心與資料限制
+- 分析信心：
+  高：紡織成衣、外銷業務、財會、生管 / 供應鏈、
+  中階 / 資深職。
+  中：人資、科技製造 PM / QA、少量高階主管。
+  低：純研發、半導體設備、跨產業 C-level、建築、
+  塑膠研發。
+- 主要依據：131 筆歷史案件、119 筆 Offer 日期、
+  成交歸屬、CASE_STATUS、CASE_LEVEL、產業名稱、
+  分工產業、職務名稱、職務分類、職級與 JD 摘要。
+- 主要限制：缺少獨立推薦成功欄位、目前負載、
+  主管評價、部分職務分類空白，高階分類欄位皆空白。</pre>
+  </div>
+</div>
+  </div>
+  <div class="collapsible-fade" aria-hidden="true"></div>
+  <label class="collapsible-toggle collapsible-toggle-bottom" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="true">
+    <span>展開完整欄位與範例</span>
+    <span class="collapsible-toggle-icon" aria-hidden="true">↓</span>
+  </label>
+</div>
+
+<div class="callout" spellcheck="false"><strong>顧問能力包使用界線：</strong>顧問能力包不維護本案公司主檔，也不產出本案職務輪廓；它只整理顧問歷史案件中的產業、公司業務本質、價值鏈位置、職務本質、成功證據與風險邊界，作為供給側語料，供案件資料包進行鏡像比對。</div>
+
+<div class="prompt-tip-modal" data-prompt-tip-modal="" hidden="">
+  <div class="prompt-tip-backdrop" data-prompt-tip-close=""></div>
+  <div class="prompt-tip-card" role="dialog" aria-modal="true" aria-labelledby="promptTipTitle">
+    <button type="button" class="prompt-tip-close" data-prompt-tip-close="" aria-label="關閉提示">×</button>
+    <div class="prompt-tip-eyebrow">Prompt Tips</div>
+    <h3 id="promptTipTitle" spellcheck="false"></h3>
+    <div class="prompt-tip-body" id="promptTipBody"></div>
+  </div>
+</div>
+<template id="promptTipFullTemplate">
+  <div class="prompt-tip-source">來源：prompts/consultant_capability_package_prompt_v1.md</div>
+  <pre class="prompt-tip-pre"># Consultant Capability Package Prompt v1
+
+Prompt family：`consultant_capability_package`  
+Major version：`v1`，代表此 prompt family 的第一個正式版本，不代表整個專案的總版本。  
+狀態：Active reference prompt  
+用途：根據單一顧問的歷史案件資料，產出「顧問能力包｜完整分析版」。  
+適用位置：`consultant_capability_package` 生成階段。  
+共用規則：需遵守 `docs/15_semantic_matching_rules.md` 的需求側 / 供給側鏡像語料、相鄰業務本質與特殊確認點判斷邏輯。  
+
+本 prompt 不負責候選池生成、部門池判斷、水流判斷、分派資格判斷、Baseline Score 計算或 LLM reranking。顧問能力包只整理歷史證據、能力邊界、適合案件類型與風險，不直接決定最終分派。
+
+## A. 顧問能力包｜完整分析版 Prompt
+
+你是一位獵才顧問能力分析助理。
+
+你的任務是根據某一位顧問的歷史案件資料，產出「顧問能力包｜完整分析版」。
+
+這份能力包的目的不是評價顧問好壞，而是整理這位顧問過去較常處理、較可能具成功經驗、以及不宜過度推論的案件類型。後續會提供給 PM、主管、Baseline Ranking、Embedding similarity 與 LLM reranking 使用。
+
+請根據輸入資料，嚴格依據歷史案件內容分析，不得自行捏造未提供的經驗、成交紀錄、推薦成功紀錄、負載資訊或主管評價。
+
+### 輸入資料
+
+你會收到某位顧問的歷史案件資料，可能包含：
+
+- 顧問姓名
+- 顧問 ID
+- 案件編號
+- 客戶名稱
+- 案件產業
+- 公司類型或客戶輪廓
+- 職務名稱
+- 職務分類
+- 職級
+- 案件狀態
+- 是否成交
+- 是否推薦成功（若資料有該欄位；目前不可假設獨立存在）
+- 顧問角色：承辦 / 合作
+- 案件日期
+- 分工產業：科技 / 非科技
+- JD 或職缺摘要
+- 其他可用欄位
+
+若某欄位未出現在實際輸入資料中，請標示「資料未提供」或「資料不足」，不得假設欄位存在。若資料沒有獨立的「推薦成功」欄位，也不得自行從案件狀態或其他欄位拆解、推導出推薦成功紀錄，除非資料定義已明確說明可如此判斷。
+
+### 分析原則
+
+請遵守以下原則：
+
+1. 請區分「接觸過」與「擅長」。若某類案件只是零星出現，請描述為「接觸過」，不要直接視為顧問強項。
+2. 請區分「案件量」與「成功證據」。若案件量高但成交或推薦成功證據不足，請保守描述。若案件量不高但有明確成功案例，可以標示為「具成功證據」。
+3. 請區分「產業分類」與「公司業務本質」。例如同樣是半導體，IC 設計、半導體設備、零組件、設備代理商的業務本質不同。
+4. 請區分「職務名稱」與「職務本質」。例如主管可能是業務主管、研發主管、財務主管、人資主管、生產主管，不可混為一談。
+5. 請保留能力邊界。不要把某一類成功經驗無限外推到所有相似產業或職務。
+6. 若資料不足，請明確標示「資料不足」，不要自行推測。
+7. 若顧問經驗分散，請明確說明「能力輪廓分散」，不要強行歸納成單一強項。
+8. 請區分「公司業務本質」、「職務本質」與「特殊條件」。顧問能力包應優先判斷顧問是否熟悉相近的公司運作方式、人才結構、職務功能與招募難點；特定認證、法規、製程名詞或產品規格應另列為案件確認點。
+9. 不得把過細的特殊條件直接視為顧問能力缺口。例如 ISO22716、化妝品 GMP、HACCP、特定機台、特定製程、特定產品標準、特定法規名詞，若未出現在顧問歷史資料中，通常只能列為「案件確認點」、「候選人搜尋條件」或「加分證據」，不得直接判定顧問不適合。
+10. 只有在該特殊條件本身就是職務核心本質時，才可提高風險權重。例如職務本身是法規、品保、驗證、稽核或特定製程專家，且顧問歷史資料完全沒有相鄰公司業務本質或相近職務證據，才可標示為明確風險。
+11. 對相鄰公司業務本質需保留合理辨識。例如衛材、濕紙巾、口罩、日用品、不織布、軟性材料加工，可能與紡織、布料、軟性材料製造有業務本質相近處；但仍需區分終端產品、製程、品質規範與通路型態。
+12. 顧問能力包不得生成精確分數，不得取代候選池、部門池、水流、分派資格或主管決策。
+
+### 輸出格式
+
+請輸出以下格式。
+
+## 【顧問能力包｜完整分析版】
+
+顧問姓名：  
+{{顧問姓名}}
+
+顧問 ID：  
+{{顧問 ID，如無則填資料未提供}}
+
+資料範圍：
+
+- 歷史案件數：{{案件數}}
+- 資料期間：{{若可判斷則填入，否則寫資料未提供}}
+- 資料限制：{{例如是否缺少 JD、是否缺少推薦成功資訊、是否只含部分案件}}
+
+### 一、顧問基本輪廓
+
+- 主要角色：{{承辦為主 / 合作為主 / 混合 / 資料不足}}
+- 主要案件狀態：{{已成交 / 推薦成功 / 進行中 / 未成交等；僅能依實際欄位判斷}}
+- 主要分工產業：{{科技 / 非科技 / 混合 / 資料不足}}
+- 能力輪廓集中度：{{高度集中 / 中度集中 / 分散}}
+- 基本摘要：  
+  {{用 3 到 5 句話說明此顧問整體能力輪廓。}}
+
+### 二、產業能力輪廓
+
+主要產業：
+
+1. {{產業 1}}：{{案件量與成功證據摘要}}
+2. {{產業 2}}：{{案件量與成功證據摘要}}
+3. {{產業 3}}：{{案件量與成功證據摘要}}
+
+次要產業：
+
+- {{次要產業 1}}
+- {{次要產業 2}}
+
+有成功證據的產業：
+
+- {{產業}}：{{成交 / 推薦成功 / 近期成功案例；僅能依實際欄位判斷}}
+
+僅接觸但不宜視為強項的產業：
+
+- {{產業}}：{{原因}}
+
+產業能力摘要：  
+{{說明此顧問真正較有把握的產業範圍，以及不宜過度外推的產業。}}
+
+### 三、公司業務本質輪廓
+
+常見公司業務本質：
+
+- {{例如：金融服務機構 / B2B 製造商 / 批發代理商 / 軟體服務公司 / 系統整合商 / 軟性材料或不織布製造商}}
+
+常見價值鏈位置：
+
+- {{例如：上游供應商 / 製造商 / 品牌商 / 通路商 / 服務提供者 / 平台商}}
+
+常見產品 / 服務型態：
+
+- {{例如：金融產品 / 硬體設備 / 軟體系統 / 物流服務 / 專業顧問服務 / 衛材與日用品製造}}
+
+常見客戶型態：
+
+- {{例如：大型企業 / 金融機構 / 科技製造客戶 / 消費者 / 政府單位}}
+
+相鄰業務本質辨識：
+
+- {{若有相近但不完全相同的公司業務本質，請說明相近處與不可外推處。例如不織布、衛材、濕紙巾、口罩、日用品製造可與紡織、布料、軟性材料製造相鄰，但不得直接等同。}}
+
+公司業務本質摘要：  
+{{說明此顧問較熟悉哪一類公司的運作方式、人才結構與職缺需求。}}
+
+### 四、職務能力輪廓
+
+主要職務類型：
+
+1. {{職務類型 1}}：{{案件量與成功證據摘要}}
+2. {{職務類型 2}}：{{案件量與成功證據摘要}}
+3. {{職務類型 3}}：{{案件量與成功證據摘要}}
+
+次要職務類型：
+
+- {{次要職務 1}}
+- {{次要職務 2}}
+
+有成功證據的職務：
+
+- {{職務}}：{{成交 / 推薦成功 / 近期相似案例；僅能依實際欄位判斷}}
+
+職務本質偏向：
+
+- {{技術職 / 業務職 / 財務職 / 人資職 / 營運職 / 產品職 / 專案職 / 管理職 / 生產管理職}}
+
+特殊條件與確認點：
+
+- {{列出職務中較細的認證、法規、製程、機台、產品規格或年資條件。若顧問資料未出現，請標示為待確認或加分證據，不得直接視為能力缺口。}}
+
+不宜過度推論的職務：
+
+- {{職務}}：{{原因}}
+
+職務能力摘要：  
+{{說明此顧問擅長的職務本質，而不只是職稱。}}
+
+### 五、職級能力輪廓
+
+主要職級：
+
+- {{專員 / 工程師 / 資深職 / 基層主管 / 中階主管 / 高階主管}}
+
+可處理職級範圍：
+
+- {{依資料判斷}}
+
+是否偏主管職：
+
+- {{是 / 否 / 部分是 / 資料不足}}
+
+是否有高階主管成功證據：
+
+- {{是 / 否 / 資料不足}}
+
+職級能力摘要：  
+{{說明此顧問較適合什麼層級的案件，是否足以支撐主管或高階主管案。}}
+
+### 六、成功經驗證據
+
+代表成功案例：
+
+1. {{客戶 / 產業 / 職務 / 職級 / 成功結果}}
+2. {{客戶 / 產業 / 職務 / 職級 / 成功結果}}
+3. {{客戶 / 產業 / 職務 / 職級 / 成功結果}}
+
+成功模式：
+
+- {{例如：金融機構中的 IT / 數據 / 產品職缺}}
+- {{例如：批發代理公司的財會 / 人資 / 營運主管}}
+- {{例如：科技製造中的技術主管 / 研發主管}}
+- {{例如：傳產或軟性材料製造中的生產 / 生管 / 供應鏈主管}}
+
+近期成功經驗：
+
+- {{若資料可判斷，列出近一年或近兩年的成功模式；若不可判斷，寫資料不足}}
+
+成功經驗摘要：  
+{{用 3 到 5 句話說明此顧問的成功經驗核心。}}
+
+### 七、主要優勢
+
+1. {{優勢 1}}
+2. {{優勢 2}}
+3. {{優勢 3}}
+
+主要優勢摘要：  
+{{用 2 到 3 句話說明此顧問最適合被推薦的原因。}}
+
+### 八、主要風險與不可過度推論處
+
+主要風險：
+
+1. {{風險 1}}
+2. {{風險 2}}
+3. {{風險 3}}
+
+不可過度推論：
+
+- {{例如：不能因為有金融產業經驗，就推論適合所有金融高階主管案}}
+- {{例如：不能因為有科技製造經驗，就推論適合所有半導體設備研發主管案}}
+- {{例如：不能因為有紡織或布料製造經驗，就直接等同具備 ISO22716 或化妝品 GMP 經驗；但也不能只因為缺少這些細項而判定不適合}}
+
+資料限制：
+
+- {{資料限制 1}}
+- {{資料限制 2}}
+
+### 九、適合優先推薦的案件類型
+
+適合產業：
+
+- {{產業 1}}
+- {{產業 2}}
+
+適合公司業務本質：
+
+- {{公司業務本質 1}}
+- {{公司業務本質 2}}
+
+適合職務：
+
+- {{職務 1}}
+- {{職務 2}}
+- {{職務 3}}
+
+適合職級：
+
+- {{職級 1}}
+- {{職級 2}}
+
+適合案件摘要：  
+{{用 2 到 4 句話說明未來哪些案件應優先考慮此顧問。}}
+
+### 十、需保守看待的案件類型
+
+需保守看待產業：
+
+- {{產業}}
+
+需保守看待職務：
+
+- {{職務}}
+
+需保守看待職級：
+
+- {{職級}}
+
+需保守看待的特殊條件：
+
+- {{例如：特定法規、品質系統、製程、機台、產品標準；若只是細項條件，請列為確認點，不要直接升級成顧問能力缺口}}
+
+保守原因：  
+{{說明為什麼這些案件不能直接推論為適合。}}
+
+### 十一、顧問能力標籤
+
+產業標籤：
+
+- {{標籤}}
+
+公司業務本質標籤：
+
+- {{標籤}}
+
+職務標籤：
+
+- {{標籤}}
+
+職級標籤：
+
+- {{標籤}}
+
+成功經驗標籤：
+
+- {{標籤}}
+
+特殊確認點標籤：
+
+- {{標籤；例如 ISO22716 待確認、化妝品 GMP 待確認、特定製程待確認}}
+
+風險標籤：
+
+- {{標籤}}
+
+### 十二、信心與資料限制
+
+- 分析信心：{{高 / 中 / 低}}
+- 主要依據：{{案件量 / 成交證據 / 推薦成功 / JD 摘要 / 職務分類 / 公司業務本質}}
+- 主要限制：{{資料不足處}}
+
+## B. Embedding 語料版 Prompt
+
+Embedding 語料版的正式版本為 `prompts/embedding_corpus_prompt_v2.md`，與完整分析版為上游 → 下游關係：先產出完整分析版，再由完整分析版萃取 `embedding_corpus_v2`，最後才產生 chunks 與 embedding（見 `docs/15_semantic_matching_rules.md` 第 7 節）。兩者共用同一份語意匹配規則，但用途不同：完整分析版供 PM、主管與 reranking 閱讀，並作為語料版的語意來源；語料版供系統計算語意相似度。`embedding_corpus_prompt_v1.md`（直接從歷史統計生成）僅作為 draft，標示 `generation_method = history_stats_semantic_synthesis`，不得與正式 v2 語料混入同一批回測。</pre>
+</template>
+
+<template id="promptTipEmbeddingTemplate">
+  <div class="prompt-tip-source">來源：prompts/embedding_corpus_prompt_v2.md（正式版，由完整分析版萃取；前身 v1 為歷史統計 draft）</div>
+  <pre class="prompt-tip-pre"># Embedding Corpus Prompt v2
+
+Prompt family：`embedding_corpus`  
+Major version：`v2`，代表 Embedding 語料生成任務的第二個正式版本。  
+狀態：Active reference prompt  
+用途：由「顧問能力包｜完整分析版」產出工程可向量化的顧問供給側語意語料。  
+適用位置：`consultant_capability_package` 完整分析版完成後、工程 embedding pipeline 前。  
+共用規則：需遵守 `docs/15_semantic_matching_rules.md` 的需求側 / 供給側鏡像語料、相鄰業務本質與特殊確認點判斷邏輯。  
+
+本 prompt 不直接從歷史統計或 Top counts 生成正式語料。正式 v2 必須以完整能力包為主要輸入，保留語意、證據與能力邊界。
+
+## A. 任務
+
+你是一位獵才顧問語意語料整理助理。
+
+你的任務是根據單一顧問的「顧問能力包｜完整分析版」，產出 `embedding_corpus_v2`。這份語料不是主管閱讀報告，而是提供工程進行 chunk、embedding、vector DB 建索引、semantic similarity 與檢索 explain 使用。
+
+語料必須能和案件資料包的需求側語料鏡像比對，包含：
+
+- 產業與產業相鄰性。
+- 公司業務本質。
+- 公司實際靠什麼產品、服務、技術或客戶關係創造價值。
+- 價值鏈位置。
+- 產品 / 服務型態。
+- 職務本質。
+- 職級與管理層級。
+- 相似案件或成功證據。
+- 特殊確認點與資料缺口。
+
+## B. 輸入資料
+
+正式 v2 必填輸入：
+
+- `consultant_capability_package` 完整分析版。
+- 顧問姓名與顧問 ID。
+- 完整能力包版本或產出日期。
+- 資料範圍與資料限制。
+
+可選輸入：
+
+- `company_business_profile`，用於補足歷史案件公司的業務本質、價值鏈位置、產品 / 服務型態。
+- 歷史案件統計表，僅能作為 `source_stats` 或輔助檢查，不得取代完整能力包語意。
+- 舊版 embedding corpus，僅能作為格式參考，不得直接覆寫 v2 語意。
+
+若沒有完整能力包，只能輸出草稿，且必須標示：
+
+```text
+generation_method = history_stats_semantic_synthesis
+limitations 包含「尚未使用完整能力包生成，僅供格式驗證或初步檢查」
+```
+
+正式版本必須標示：
+
+```text
+generation_method = full_analysis_seeded_semantic_profile
+```
+
+## C. 生成原則
+
+1. 先讀完整能力包，再萃取語意輪廓。
+2. 不要把產業 Top counts、職稱 Top counts 或案件數直接改寫成主要能力結論。
+3. 請使用完整句描述顧問熟悉的公司業務本質、價值鏈位置與職務本質。
+4. 請區分「主要能力」、「次要接觸」、「相鄰經驗」與「不可外推邊界」。
+5. 主匹配語料與特殊確認點語料必須分開。
+6. ISO22716、化妝品 GMP、HACCP、特定製程、機台、認證或法規若沒有明確證據，請列為資料不足或待確認，不得寫成顧問能力缺口。
+7. 不得自行新增完整能力包沒有支持的成交紀錄、推薦成功、主管評價或特殊專長。
+8. 不得生成精確分數，不得替代 candidate pool、department pool、waterflow、assignment eligibility、baseline score 或 LLM reranking。
+9. 顧問姓名、部門、課別與案件數可作為 metadata，不應作為主要 semantic similarity 內容。
+10. 若完整能力包內部有不一致或資料不足，請在 `limitations` 中明確標示。
+
+## D. 輸出 JSON Schema
+
+請輸出單一 JSON object：
+
+```json
+{
+  "corpus_version": "embedding_corpus_v2",
+  "prompt_version": "embedding_corpus_prompt_v2",
+  "corpus_role": "consultant_capability_supply_side",
+  "generation_method": "full_analysis_seeded_semantic_profile",
+  "consultant": {
+    "consultant_id": "string_or_data_not_provided",
+    "consultant_name": "string",
+    "team": "string_or_data_not_provided"
+  },
+  "source_versions": {
+    "capability_package_version": "string_or_date",
+    "company_business_profile_version": "string_or_data_not_provided",
+    "history_data_range": "string_or_data_not_provided"
+  },
+  "semantic_profile": {
+    "consultant_summary": "完整句摘要顧問主要能力與適合案件",
+    "primary_industries": ["主要產業語意，不只放標籤"],
+    "secondary_industries": ["次要接觸產業"],
+    "company_business_nature": ["顧問熟悉的公司業務本質"],
+    "value_chain_position": ["上游、製造、品牌、通路、服務、系統整合等"],
+    "product_service_type": ["硬體產品、軟體服務、專案型服務、代理、顧問等"],
+    "role_function_nature": ["職務本質與招募功能"],
+    "seniority_scope": ["職級、管理幅度或角色層級"],
+    "adjacent_business_nature": ["可支持相鄰判斷的經驗"],
+    "success_evidence": ["有來源支持的成功或相似案件證據"],
+    "risk_boundaries": ["不可過度推論處"]
+  },
+  "main_matching_corpus": "一段可直接 embedding 的主匹配語料，描述顧問供給側能力。",
+  "facet_embedding_texts": {
+    "industry_and_business_nature": "產業與公司業務本質分面語料",
+    "value_chain_and_product_service": "價值鏈與產品服務型態分面語料",
+    "role_function_and_seniority": "職務本質、職級與管理層級分面語料",
+    "adjacent_fit": "相鄰業務本質與可外推邊界分面語料",
+    "success_evidence": "相似案件、成交或推薦成功證據分面語料",
+    "risk_boundaries": "資料限制與不宜外推分面語料"
+  },
+  "checkpoint_embedding_texts": {
+    "certifications_or_regulations": "特殊認證、法規或標準的證據狀態",
+    "specific_process_or_equipment": "特定製程、設備、機台或產品標準的證據狀態",
+    "client_or_channel_constraints": "特定客戶型態、通路或關係型需求的證據狀態",
+    "human_review_needed": "需要主管或 PM 確認的事項"
+  },
+  "tags": {
+    "industry_tags": ["僅供篩選"],
+    "function_tags": ["僅供篩選"],
+    "business_nature_tags": ["僅供篩選"],
+    "checkpoint_tags": ["僅供篩選"]
+  },
+  "source_stats": {
+    "case_count": "number_or_data_not_provided",
+    "deal_count": "number_or_data_not_provided",
+    "history_period": "string_or_data_not_provided",
+    "has_job_description": "true_false_or_data_not_provided",
+    "has_success_label": "true_false_or_data_not_provided"
+  },
+  "limitations": [
+    "資料限制、欄位缺口或不宜外推事項"
+  ]
+}
+```
+
+## E. Chunk 產出規則
+
+若需要同時輸出 chunks，請依下列 chunk type 產生：
+
+| chunk_type | 使用方式 | main_similarity_allowed |
+|---|---|---|
+| `main_matching` | 主要 semantic similarity | true |
+| `facet_industry_business` | 產業與公司業務本質分面檢索 | true |
+| `facet_value_chain_product` | 價值鏈與產品 / 服務型態分面檢索 | true |
+| `facet_role_function` | 職務本質與職級分面檢索 | true |
+| `facet_adjacent_fit` | 相鄰業務本質與可外推邊界 | true |
+| `facet_success_evidence` | 相似案件或成功證據檢索 | true |
+| `risk_boundaries` | 風險、資料缺口與不可外推 | false |
+| `checkpoint` | 特殊認證、法規、製程、機台或主管確認點 | false |
+
+`checkpoint` 不應直接進入主要 similarity。若工程需要把特殊條件納入排序，必須另行建立 checkpoint signal，並保留是否為職務核心本質的標記。
+
+## F. 品質檢查
+
+輸出前請檢查：
+
+- 是否已引用完整能力包，而不是只引用 Top counts。
+- 是否有描述公司業務本質與價值鏈位置。
+- 是否有區分主匹配語料與特殊確認點。
+- 是否有標記資料不足與不可外推邊界。
+- 是否沒有生成精確分數。
+- 是否沒有推翻候選池、部門池、水流或分派資格規則。</pre>
+</template>
+<div class="callout" spellcheck="false"><strong>資料來源說明：</strong>顧問能力包由系統從<strong>歷史案件資料庫、顧問主檔、推薦 / 成交紀錄與 workload</strong>萃取原始資料，再透過 <strong>LLM 分析整理</strong>成結構化格式。「LLM 分析」欄位表示由模型根據歷史資料推論產出，不直接來自系統原始欄位；若資料不足，需標示資料缺口、信心程度與待確認事項。Embedding 語料版（v2）由完整分析版萃取產生，不直接混入完整分析版欄位。</div>
+
+<!-- 第四層：候選顧問比較包 -->
+<h2 id="ch4" spellcheck="false">07 · 第四層：候選顧問比較包</h2>
+<p spellcheck="false">候選顧問比較包的目的，是讓 LLM 能夠<strong>比較人</strong>，而不是只看到一個總分。</p>
+
+<div class="compare">
+  <div class="col before">
+    <div class="col-label" spellcheck="false">❌ 不好的資料（無法比較）</div>
+    <div class="rank-item"><span class="rk-no">A 顧問</span><span class="rk-score">86 分</span></div>
+    <div class="rank-item"><span class="rk-no">B 顧問</span><span class="rk-score">82 分</span></div>
+    <div class="rank-item"><span class="rk-no">C 顧問</span><span class="rk-score">79 分</span></div>
+    <p class="sub" style="margin-top:12px;" spellcheck="false">LLM 只能照分數排，無法判斷為什麼 B 可能比 A 更適合。</p>
+  </div>
+  <div class="arrow-mid">→</div>
+  <div class="col after">
+    <div class="col-label" spellcheck="false">✓ 可比較的資料</div>
+    <p class="sub" style="margin: 0;" spellcheck="false">每位顧問展開：產業相似度、職務相似度、職級相似度、過往相似案件、成交證據、目前負載、優勢、風險。</p>
+    <p class="sub" style="margin-top: 10px;" spellcheck="false">LLM 看到的不只是分數，而是分數背後的證據。</p>
+  </div>
+</div>
+
+<h3 spellcheck="false">範例：A／B／C 三位候選顧問比較包</h3>
+
+<div class="consult-grid">
+  <div class="consult-card">
+    <div class="consult-head">
+      <span class="consult-name" spellcheck="false">A 顧問</span>
+      <span class="consult-rank" spellcheck="false">初步排名 1 · 86 分</span>
+    </div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">產業相似</span><span class="consult-val" spellcheck="false">高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務相似</span><span class="consult-val" spellcheck="false">中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職級相似</span><span class="consult-val" spellcheck="false">中高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">業務本質貼合</span><span class="consult-val" spellcheck="false">中高：具備半導體與科技製造相關經驗，產業方向接近，但過往案例多偏業務、廠務或非研發主管職，與「設備研發製造商」核心需求未完全貼合。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務輪廓貼合</span><span class="consult-val" spellcheck="false">中：雖有科技製造經驗，但研發主管 / 技術主管 / 機構設計管理相關成功證據不足。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">相似成功證據</span><span class="consult-val" spellcheck="false">中：近兩年科技製造相關成交 2 件，但缺少明確的研發主管或設備研發主管成功案例。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">過往案件</span><span class="consult-val" spellcheck="false">半導體設備業務主管案未成交、電子製造業廠務主管案成交、半導體零組件業務經理案成交</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">目前負載</span><span class="consult-val" spellcheck="false">偏高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要優勢</span><span class="consult-val" spellcheck="false">半導體與科技製造產業經驗強；對科技製造客戶與產業語言較熟悉。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要風險</span><span class="consult-val" spellcheck="false">過往案例多偏業務、廠務，研發主管經驗不足；負載偏高，若本案難度高，承接品質需留意。</span></div>
+  </div>
+  <div class="consult-card">
+    <div class="consult-head">
+      <span class="consult-name" spellcheck="false">B 顧問</span>
+      <span class="consult-rank highlight" spellcheck="false">初步排名 2 · 82 分</span>
+    </div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">產業相似</span><span class="consult-val" spellcheck="false">中高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務相似</span><span class="consult-val" spellcheck="false">高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職級相似</span><span class="consult-val" spellcheck="false">高</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">業務本質貼合</span><span class="consult-val" spellcheck="false">高：過往經驗包含電子製造、精密機械與半導體供應鏈相關案件，與「半導體設備 / 精密機械 / 技術研發型公司」業務本質接近。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務輪廓貼合</span><span class="consult-val" spellcheck="false">高：具備研發主管、技術主管、工程主管等相關案件經驗，與本案研發主管職務高度貼合。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">相似成功證據</span><span class="consult-val" spellcheck="false">高：近兩年技術主管 / 研發主管相關成交 2 件，並有精密機械技術主管推薦成功案例。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">過往案件</span><span class="consult-val" spellcheck="false">電子製造業研發主管案成交、精密機械技術主管案推薦成功、半導體供應鏈工程主管案進行中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">目前負載</span><span class="consult-val" spellcheck="false">中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要優勢</span><span class="consult-val" spellcheck="false">研發主管與技術主管經驗較貼近本案核心需求；具備技術型主管案件的成功證據；負載中等，承接條件比 A 顧問更穩。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要風險</span><span class="consult-val" spellcheck="false">半導體設備產業經驗不如 A 顧問集中。</span></div>
+  </div>
+  <div class="consult-card">
+    <div class="consult-head">
+      <span class="consult-name" spellcheck="false">C 顧問</span>
+      <span class="consult-rank" spellcheck="false">初步排名 3 · 79 分</span>
+    </div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">產業相似</span><span class="consult-val" spellcheck="false">中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務相似</span><span class="consult-val" spellcheck="false">中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職級相似</span><span class="consult-val" spellcheck="false">中</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">業務本質貼合</span><span class="consult-val" spellcheck="false">中：有部分製造業與機構工程相關經驗，但與半導體設備研發製造商的貼合度有限。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">職務輪廓貼合</span><span class="consult-val" spellcheck="false">中低：有機構工程師案經驗，但主管級研發管理與技術主管成功證據不足。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">相似成功證據</span><span class="consult-val" spellcheck="false">低至中：有技術類職缺經驗，但主管職成交證據較少。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">過往案件</span><span class="consult-val" spellcheck="false">機構工程師案推薦成功、製造業品保主管案未成交</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">目前負載</span><span class="consult-val" spellcheck="false">低</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要優勢</span><span class="consult-val" spellcheck="false">負載低，可承接新案；有部分技術職缺經驗。</span></div>
+    <div class="consult-row"><span class="consult-label" spellcheck="false">主要風險</span><span class="consult-val" spellcheck="false">主管級研發案件證據不足；與本案核心成功條件的貼合度不如 A、B 明確。</span></div>
+  </div>
+</div>
+
+<!-- LLM 決策流程視覺化 -->
+<h2 id="ch5" spellcheck="false">08 ·&nbsp;<span style="letter-spacing: -0.01em;">LLM Reranking</span><span style="letter-spacing: -0.01em;">決策流程</span><br></h2>
+<div class="flow">
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">判斷案件本質</div>
+      <div class="flow-desc" spellcheck="false">本案最重要的是產業、職務、職級、客戶經營，還是治理因素？</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">比較候選顧問</div>
+      <div class="flow-desc" spellcheck="false">誰的過往案例最接近本案核心成功條件？</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">考量結果證據</div>
+      <div class="flow-desc" spellcheck="false">誰有較明確的成交、推薦成功或相似案件結果？</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">考量治理因素</div>
+      <div class="flow-desc" spellcheck="false">負載、缺案、業績平衡、近期分派頻率。</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">決定是否翻轉排序</div>
+      <div class="flow-desc" spellcheck="false">若專業差距大，專業優先；若專業差距小，治理因素可以介入。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 排序判斷規則 -->
+<h2 id="ch6" spellcheck="false">09 · LLM Reranking 決策框架規則</h2>
+<p spellcheck="false">判斷規則的目的，是避免 LLM 按照自己的直覺亂排。要明確告訴它：在獵才分案中，什麼情況該優先看什麼。</p>
+
+<div class="rule">
+  <div class="rule-num">RULE 01 · 硬規則</div>
+  <div class="rule-title" spellcheck="false">候選池限制不可推翻</div>
+  <ul>
+    <li>只能在本次提供的候選顧問名單內重新排序。</li>
+    <li>不得推薦候選名單外的顧問。</li>
+    <li>不得因顧問看起來適合，就忽略部門池、水流或分派資格限制。</li>
+    <li>若候選人資料不足，應標示「資料不足」，不得自行推測。</li>
+  </ul>
+  <p class="sub" spellcheck="false"><strong>本質：</strong>LLM reranking 不是全公司自由選人，而是在已經過部門池與分案資格篩選後，做最後排序。</p>
+</div>
+
+<div class="rule">
+  <div class="rule-num">RULE 02 · 案件本質</div>
+  <div class="rule-title" spellcheck="false">先判斷案件本質，再比較顧問</div>
+  <p spellcheck="false">排序前，請先判斷本案最重要的成功條件屬於哪一類：</p>
+  <div>
+    <span class="pill pill-blue">A. 產業經驗優先</span>
+    <span class="pill pill-blue">B. 職務／職能經驗優先</span>
+    <span class="pill pill-blue">C. 職級／高階主管經驗優先</span>
+    <span class="pill pill-blue">D. 客戶經營經驗優先</span>
+    <span class="pill pill-blue">E. 治理因素優先</span>
+    <span class="pill pill-blue">F. 混合型</span>
+  </div>
+  <p class="sub" style="margin-top:10px;" spellcheck="false"><strong>應用到本範例：</strong>這不是單純的「半導體產業案」，而是「半導體設備 × 研發主管 × 技術管理」案。所以 B 顧問雖然總分略低，但若他有更強的研發主管經驗，就有機會被提升。</p>
+</div>
+
+<div class="rule">
+  <div class="rule-num">RULE 03 · 分數使用</div>
+  <div class="rule-title" spellcheck="false">專業匹配優先於單一總分</div>
+  <ul>
+    <li>Baseline Score 是重要參考，但不是唯一依據。</li>
+    <li>若分數差距小於 5 分，允許根據案件本質調整排序。</li>
+    <li>若分數差距大於 10 分，除非有明確證據，否則不應大幅翻轉排序。</li>
+    <li>若要把低分顧問往前調，必須指出具體證據。</li>
+    <li>不得使用資料中不存在的理由調整排序。</li>
+  </ul>
+  <table style="margin-top:10px;">
+    <thead><tr><th style="width:65%" spellcheck="false">情境</th><th spellcheck="false">LLM 是否可調整</th></tr></thead>
+    <tbody>
+      <tr><td spellcheck="false">A 86 分，B 82 分，且 B 職務更貼近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
+      <tr><td spellcheck="false">A 92 分，B 65 分，只因 B 負載低</td><td spellcheck="false"><span class="pill pill-red">不應調整</span></td></tr>
+      <tr><td spellcheck="false">A 86 分但負載極高；B 84 分且經驗相近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
+      <tr><td spellcheck="false">A 分數最高，但資料顯示多為業務職，不是研發職</td><td spellcheck="false"><span class="pill pill-green">可以降一位</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="rule">
+  <div class="rule-num">RULE 04 · 治理因素</div>
+  <div class="rule-title" spellcheck="false">治理因素只能在「專業差距不大」時介入</div>
+  <p spellcheck="false">治理因素包括：顧問 loading、近期是否缺案、業績缺口、近期分派頻率、是否需要培養新顧問、部門水流平衡需求。</p>
+  <ul>
+    <li>當兩位顧問專業匹配差距不大時，可以用負載、缺案、業績平衡調整排序。</li>
+    <li>若某顧問專業明顯不符，不得只因負載低而排到前面。</li>
+    <li>若某顧問負載明顯過高，即使專業分數高，也可降一位，但需保留在推薦名單中。</li>
+    <li>若案件為高價值或高難度案，專業匹配優先於補案需求。</li>
+    <li>若案件為一般難度，治理因素可提高權重。</li>
+  </ul>
+  <div class="callout" style="margin-top:10px;" spellcheck="false"><strong>主管會認同的邏輯：</strong>專業差距大時，看專業；專業差距小時，看治理。比單純把 loading 加權進公式更貼近主管實際判斷。</div>
+</div>
+
+<div class="rule">
+  <div class="rule-num">RULE 05 · 輸出格式</div>
+  <div class="rule-title" spellcheck="false">每次調整都要說明「調整原因」</div>
+  <p spellcheck="false">LLM reranking 最大價值不是只排出新順序，而是<strong>留下決策理由</strong>。請輸出：</p>
+  <ol>
+    <li>最終 Top 3～5 排序</li>
+    <li>每位顧問推薦理由</li>
+    <li>若排序與初步分數不同，請說明調整原因</li>
+    <li>每位顧問的主要風險</li>
+    <li>是否有資料不足或需主管確認的地方</li>
+  </ol>
+</div>
+
+<!-- 完整 Prompt 範本 -->
+<h2 id="ch7" spellcheck="false">10 · 完整 LLM Reranking Prompt 範本</h2>
+<p spellcheck="false">下面是一個prompt雛形，主要用來<strong>限制 LLM 的決策邊界。</strong></p>
+
+<pre spellcheck="false">你是一位獵才分案推薦助理，任務是根據案件需求、候選顧問資料與分案規則，
+重新排序候選顧問，輸出最適合主管優先考慮的 Top 3～5。
+
+請遵守以下原則：
+
+【硬規則】
+1. 只能在提供的候選顧問名單內排序，不得新增名單外顧問。
+2. 不得捏造候選顧問沒有提供的經驗、成交紀錄或負載資訊。
+3. 若資料不足，請明確標示「資料不足」，不得自行推論為事實。
+4. Baseline Score 是重要參考，但不是唯一依據。
+
+【判斷順序】
+1. 先判斷案件本質：本案最重要的是產業、職務、職級、客戶經營，還是治理因素？
+2. 再比較候選顧問：誰的過往案例最接近本案核心成功條件？
+3. 再考量結果證據：誰有較明確的成交、推薦成功或相似案件結果？
+4. 最後考量治理因素：負載、缺案、業績平衡、近期分派頻率。
+5. 若專業差距大，專業優先；若專業差距小，治理因素可以介入排序。
+
+【分數調整原則】
+1. 若候選顧問 Baseline Score 差距小於 5 分，可以根據案件本質調整排序。
+2. 若差距大於 10 分，除非有明確證據，不應大幅翻轉排序。
+3. 若要把低分顧問往前調，必須指出具體證據。
+4. 若顧問負載過高，可降一位，但需說明是否仍保留在 Top 3～5。
+
+【輸出格式】
+請輸出：
+1. 案件本質判斷
+2. 最終 Top 3～5 排序
+3. 每位顧問推薦理由
+4. 與初步排序不同之處
+5. 主要風險與主管需確認事項</pre>
+
+<div class="callout" spellcheck="false">
+  <strong>這段 prompt 的設計重點：</strong>
+  不能亂加人 ‧ 不能亂編資料 ‧ 不能完全無視分數 ‧ 不能只看分數 ‧ 要先判斷案件本質 ‧ 專業差距小時才讓治理因素介入 ‧ 每次調整都要有證據。
+</div>
+
+<!-- 完整輸入輸出範例 -->
+<h2 id="ch8" spellcheck="false">11 · 實際輸入與輸出範例</h2>
+
+<div class="io-grid">
+  <div class="io-col">
+    <h3 spellcheck="false">輸入給 LLM</h3>
+    <pre class="light" spellcheck="false">【案件資料】
+案件：半導體設備公司 — 研發主管
+核心需求：研發主管、技術管理、機構設計、跨部門協作
+本案判斷提示：若產業與職務衝突，優先看研發主管與技術管理經驗。
+
+【初步排序】
+1. A 顧問：86 分
+2. B 顧問：82 分
+3. C 顧問：79 分
+
+【候選顧問資料】
+A 顧問：
+- 產業相似度：高
+- 職務相似度：中
+- 過往案例：半導體設備業務主管 3 件、製造業廠務主管 2 件
+- 成交：近兩年科技製造成交 2 件
+- 負載：偏高
+- 風險：研發主管經驗不足
+
+B 顧問：
+- 產業相似度：中高
+- 職務相似度：高
+- 過往案例：電子製造業研發主管 2 件、精密機械技術主管 2 件
+- 成交：近兩年技術主管成交 2 件
+- 負載：中
+- 風險：半導體設備產業經驗較少
+
+C 顧問：
+- 產業相似度：中
+- 職務相似度：中
+- 過往案例：機構工程師案、製造品保主管案
+- 成交：技術類職缺有部分推薦成功
+- 負載：低
+- 風險：主管職與研發管理證據不足</pre>
+  </div>
+  <div class="io-col">
+    <h3 spellcheck="false">LLM 完整輸出</h3>
+    <pre class="light" spellcheck="false">【案件本質判斷】
+本案雖屬半導體設備產業，但核心成功條件不只是產業理解，
+而是研發主管與技術管理經驗。因此職務／職能相似度應高於泛產業相似度。
+
+【最終排序】
+1. B 顧問
+2. A 顧問
+3. C 顧問
+
+【調整理由】
+B 顧問雖然 Baseline Score 為 82，低於 A 顧問的 86，
+但其過往案例包含電子製造業研發主管與精密機械技術主管，
+更貼近本案的研發主管與技術管理需求。且目前負載為中，
+承接性優於 A 顧問，因此調整為第一順位。
+
+A 顧問在半導體設備與科技製造產業經驗較強，
+但過往案例偏業務與廠務職，與本案核心職務有落差。
+因此保留在第二順位。
+
+C 顧問負載低，但主管職與研發管理證據不足，
+適合作為第三順位備選，不宜因負載低而排到前面。
+
+【主管需確認】
+若客戶極度重視半導體設備產業人脈，A 顧問仍可能是合理第一順位。
+若客戶更重視研發管理與技術團隊理解，B 顧問較適合優先承接。</pre>
+  </div>
+</div>
+
+<h3 spellcheck="false">排序翻轉：Baseline vs Reranking</h3>
+<div class="compare">
+  <div class="col before">
+    <div class="col-label" spellcheck="false">Baseline Score 初步排序</div>
+    <div class="rank-item"><span class="rk-no">1.</span>A 顧問<span class="rk-score">86 分</span></div>
+    <div class="rank-item"><span class="rk-no">2.</span>B 顧問<span class="rk-score">82 分</span></div>
+    <div class="rank-item"><span class="rk-no">3.</span>C 顧問<span class="rk-score">79 分</span></div>
+    <p class="sub" style="margin-top:12px;" spellcheck="false">只看總分，A 是最佳人選。</p>
+  </div>
+  <div class="arrow-mid">→</div>
+  <div class="col after">
+    <div class="col-label" spellcheck="false">LLM Reranking 後排序</div>
+    <div class="rank-item" style="background:#e8f1ec;"><span class="rk-no">1.</span>B 顧問<span class="rk-score">職務相似度高、研發主管案多</span></div>
+    <div class="rank-item"><span class="rk-no">2.</span>A 顧問<span class="rk-score">產業強但偏業務、廠務</span></div>
+    <div class="rank-item"><span class="rk-no">3.</span>C 顧問<span class="rk-score">負載低但證據不足</span></div>
+    <p class="sub" style="margin-top:12px;" spellcheck="false"><strong>看案件本質後，B 因研發主管經驗更貼近本案而上升。</strong></p>
+  </div>
+</div>
+
+<div class="callout" spellcheck="false">
+  <strong>這個輸出為什麼有用：</strong>主管不只看到排序，還能看到「如果你重視產業，A 仍合理；如果你重視研發主管職能，B 更合理」。這才是 LLM reranking 的真正價值。
+</div>
+
+<!-- 欄位設計 -->
+<!-- 結論 -->
+<h2 id="ch10" spellcheck="false">12 · 最重要的設計原則</h2>
+
+<div class="principle">
+  <div class="ptitle">最終收斂</div>
+  <div class="pquote">
+    資料包決定 LLM 看得到什麼；<br>
+    判斷規則決定 LLM 可以怎麼想。
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="col-block">
+    <h4 style="color: var(--accent);" spellcheck="false">第一，資料包要讓 LLM 能比較</h4>
+    <p class="sub" spellcheck="false">不能只給分數，要給分數背後的證據。產業相似度、職務相似度、過往案例、成交證據、負載、風險，缺一不可。</p>
+  </div>
+  <div class="col-block">
+    <h4 style="color: var(--success);" spellcheck="false">第二，規則要讓 LLM 不亂判斷</h4>
+    <p class="sub" spellcheck="false">不能讓它自由發揮，要限制它在候選池、分數差距、專業優先、治理因素等邊界內排序。</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px; background: linear-gradient(135deg, #eaf0f7 0%, #ffffff 100%); border-color: var(--primary);">
+  <h4 style="color: var(--primary); margin-top:0;" spellcheck="false">職責分工的清晰收斂</h4>
+  <table style="margin:0;">
+    <tbody>
+      <tr><td style="width:32%;" spellcheck="false"><strong>Baseline Score</strong></td><td spellcheck="false">負責給出穩定初判</td></tr>
+      <tr><td spellcheck="false"><strong>資料包</strong></td><td spellcheck="false">負責提供證據</td></tr>
+      <tr><td spellcheck="false"><strong>判斷規則</strong></td><td spellcheck="false">負責約束 LLM</td></tr>
+      <tr><td spellcheck="false"><strong>LLM Reranking</strong></td><td spellcheck="false">負責在證據與規則之上做最後比較</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer-note">
+  獵才分案 LLM Reranking · 第一版設計藍圖 · 2026
+</div>
+
+</div>
+
+<script>
+  // Scroll spy: highlight active sidebar link based on viewport position
+  (function () {
+    const links = document.querySelectorAll('.sidebar nav a');
+    const map = new Map();
+    links.forEach(a => {
+      const id = a.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (target) map.set(target, a);
+    });
+
+    if (!('IntersectionObserver' in window) || map.size === 0) return;
+
+    const visible = new Set();
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      });
+      // pick the top-most visible section
+      const sorted = Array.from(visible).sort(
+        (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top
+      );
+      links.forEach(a => a.classList.remove('active'));
+      if (sorted.length > 0) {
+        const active = map.get(sorted[0]);
+        if (active) active.classList.add('active');
+      }
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+
+    map.forEach((_, target) => observer.observe(target));
+  })();
+</script>
+
+
+<!-- 右側收合側邊欄 -->
+<div id="edit-sidebar" class="collapsed">
+  <div id="sidebar-tab" onclick="toggleSidebar()" title="收合／展開工具列">
+    <span id="tab-arrow">›</span>
+  </div>
+  <div id="sidebar-head">
+    <div class="sidebar-title">✏️ 編輯工具</div>
+    <div class="sidebar-sub">點擊文字修改 · 拖曳框選重點</div>
+  </div>
+  <div id="sidebar-body">
+    <div>
+      <div class="sb-label">模式</div>
+      <button class="sb-btn primary" id="toggle-edit" onclick="toggleEdit()">✏️ 開啟編輯模式</button>
+      <button class="sb-btn primary" id="toggle-mark" onclick="toggleMark()" style="margin-top:8px;">🎯 框選重點</button>
+      <button class="sb-btn primary" id="toggle-note" onclick="toggleNote()" style="margin-top:8px;">📝 貼 Note</button>
+    </div>
+    <div class="sb-divider"></div>
+    <div id="format-section" style="opacity: 0.4; pointer-events: none;">
+      <div class="sb-label">格式</div>
+      <div id="format-group">
+        <button class="fmt-btn" onmousedown="e_fmt(event,'bold')" title="粗體"><b>B</b></button>
+        <button class="fmt-btn" onmousedown="e_fmt(event,'italic')" title="斜體"><i>I</i></button>
+        <button class="fmt-btn" onmousedown="e_fmt(event,'underline')" title="底線"><u>U</u></button>
+        <button class="fmt-btn" onmousedown="e_fmt(event,'removeFormat')" title="清除格式">✕</button>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <div id="color-section" style="opacity: 0.4; pointer-events: none;">
+      <div class="sb-label">字色</div>
+      <div id="color-group">
+        <div class="color-dot" style="background:#1e3a5f" onmousedown="e_setColor(event,'#1e3a5f')" title="深藍"></div>
+        <div class="color-dot" style="background:#2c5282" onmousedown="e_setColor(event,'#2c5282')" title="藍"></div>
+        <div class="color-dot" style="background:#c97a3e" onmousedown="e_setColor(event,'#c97a3e')" title="橙"></div>
+        <div class="color-dot" style="background:#2d6a4f" onmousedown="e_setColor(event,'#2d6a4f')" title="綠"></div>
+        <div class="color-dot" style="background:#8b3a3a" onmousedown="e_setColor(event,'#8b3a3a')" title="紅"></div>
+        <div class="color-dot" style="background:#555555" onmousedown="e_setColor(event,'#555555')" title="灰"></div>
+        <div class="color-dot" style="background:#000000" onmousedown="e_setColor(event,'#000000')" title="黑"></div>
+        <div class="color-dot" style="background:#b08043" onmousedown="e_setColor(event,'#b08043')" title="金"></div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <div>
+      <div class="sb-label">儲存</div>
+      <button class="sb-btn success" onclick="exportHTML()">💾 另存新檔</button>
+    </div>
+  </div>
+</div>
+<div id="mini-bar">
+  <button onclick="e_fmt(event,'bold')"><b>B</b></button>
+  <button onclick="e_fmt(event,'italic')"><i>I</i></button>
+</div>
+<div id="edit-notice" style="display: none;">✏️ 編輯模式已開啟 — 點擊任意文字即可修改，完成後按右側「💾 另存新檔」</div>
+<div id="hl-draft" style="left: 329px; top: 10202px; width: 1112px; height: 1245px; display: none;"></div>
+
+<script>
+  (() => {
+    function syncCollapsibleToggle(input) {
+      document.querySelectorAll('.collapsible-toggle[for="' + input.id + '"]').forEach((toggle) => {
+        toggle.setAttribute('aria-expanded', String(input.checked));
+      });
+    }
+
+    function toggleCollapsible(label) {
+      const input = document.getElementById(label.getAttribute('for'));
+      if (!input) return;
+      input.checked = !input.checked;
+      syncCollapsibleToggle(input);
+    }
+
+    document.querySelectorAll('.collapsible-state').forEach(syncCollapsibleToggle);
+
+    document.addEventListener('change', (event) => {
+      if (!event.target.matches('.collapsible-state')) return;
+      syncCollapsibleToggle(event.target);
+    });
+
+    document.addEventListener('click', (event) => {
+      const label = event.target.closest('.collapsible-toggle[for]');
+      if (!label) return;
+      event.preventDefault();
+      toggleCollapsible(label);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const label = event.target.closest('.collapsible-toggle[for]');
+      if (!label) return;
+      event.preventDefault();
+      toggleCollapsible(label);
+    });
+  })();
+
+  (() => {
+    const promptTips = {
+      full: {
+        title: '完整分析版 Prompt',
+        template: 'promptTipFullTemplate'
+      },
+      embedding: {
+        title: 'Embedding 語料版 Prompt',
+        template: 'promptTipEmbeddingTemplate'
+      }
+    };
+    const modal = document.querySelector('[data-prompt-tip-modal]');
+    const title = document.getElementById('promptTipTitle');
+    const body = document.getElementById('promptTipBody');
+    let lastTrigger = null;
+
+    function openPromptTip(key, trigger) {
+      const tip = promptTips[key];
+      if (!tip || !modal || !title || !body) return;
+      lastTrigger = trigger;
+      title.textContent = tip.title;
+      const template = document.getElementById(tip.template);
+      body.innerHTML = template ? template.innerHTML : '';
+      modal.hidden = false;
+      const closeBtn = modal.querySelector('[data-prompt-tip-close]');
+      if (closeBtn) closeBtn.focus();
+    }
+
+    function closePromptTip() {
+      if (!modal || modal.hidden) return;
+      modal.hidden = true;
+      if (lastTrigger) lastTrigger.focus();
+    }
+
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-prompt-tip]');
+      if (trigger) {
+        event.preventDefault();
+        event.stopPropagation();
+        openPromptTip(trigger.getAttribute('data-prompt-tip'), trigger);
+        return;
+      }
+      if (event.target.closest('[data-prompt-tip-close]')) {
+        event.preventDefault();
+        closePromptTip();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closePromptTip();
+    });
+  })();
+</script>
+
+<script data-editor-script="">
+  let editMode = false;
+  let sidebarCollapsed = true;
+
+  // ── 側邊欄收合 ──
+  function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    const sidebar = document.getElementById('edit-sidebar');
+    const arrow = document.getElementById('tab-arrow');
+    sidebar.classList.toggle('collapsed', sidebarCollapsed);
+    arrow.textContent = sidebarCollapsed ? '‹' : '›';
+  }
+
+  // ── 編輯模式開關 ──
+  function toggleEdit() {
+    editMode = !editMode;
+    const btn = document.getElementById('toggle-edit');
+    const fmtSec = document.getElementById('format-section');
+    const colSec = document.getElementById('color-section');
+    if (editMode) {
+      if (markMode) toggleMark();
+      if (typeof noteMode !== 'undefined' && noteMode) toggleNote();
+      btn.textContent = '🔒 關閉編輯模式';
+      btn.classList.add('active');
+      fmtSec.style.opacity = '1'; fmtSec.style.pointerEvents = 'auto';
+      colSec.style.opacity = '1'; colSec.style.pointerEvents = 'auto';
+      document.body.classList.add('editing');
+      enableEditing();
+    } else {
+      btn.textContent = '✏️ 開啟編輯模式';
+      btn.classList.remove('active');
+      fmtSec.style.opacity = '0.4'; fmtSec.style.pointerEvents = 'none';
+      colSec.style.opacity = '0.4'; colSec.style.pointerEvents = 'none';
+      document.body.classList.remove('editing');
+      disableEditing();
+    }
+  }
+
+  // ── 框選重點 ──
+  let markMode = false;
+  let drawing = null;
+  let resizing = null;
+
+  function toggleMark() {
+    markMode = !markMode;
+    const btn = document.getElementById('toggle-mark');
+    if (markMode) {
+      if (editMode) toggleEdit();
+      if (typeof noteMode !== 'undefined' && noteMode) toggleNote();
+      btn.textContent = '🔒 退出框選模式';
+      btn.classList.add('active');
+      document.body.classList.add('mark-mode');
+    } else {
+      btn.textContent = '🎯 框選重點';
+      btn.classList.remove('active');
+      document.body.classList.remove('mark-mode');
+    }
+  }
+
+  document.addEventListener('mousedown', (e) => {
+    // hl-resize 把手：開始縮放（與 markMode 無關，匯出後也能用）
+    if (e.target.classList && e.target.classList.contains('hl-resize')) {
+      const box = e.target.closest('.hl-box');
+      if (box) {
+        e.stopPropagation();
+        e.preventDefault();
+        let id = box.getAttribute('data-hl-id');
+        if (!id) { id = 'hl-' + (++hlIdSeq); box.setAttribute('data-hl-id', id); }
+        resizing = { id, startX: e.pageX, startY: e.pageY, startW: box.offsetWidth, startH: box.offsetHeight };
+        return;
+      }
+    }
+    if (!markMode) return;
+    if (sidebarEl() && sidebarEl().contains(e.target)) return;
+    if (e.target.closest('.hl-box') || e.target.closest('.hl-close') || e.target.closest('.hl-resize')) return;
+    if (e.target.closest('.note-marker')) return;
+    e.preventDefault();
+    const draft = document.getElementById('hl-draft');
+    drawing = { startX: e.pageX, startY: e.pageY, el: draft };
+    draft.style.left = e.pageX + 'px';
+    draft.style.top = e.pageY + 'px';
+    draft.style.width = '0px';
+    draft.style.height = '0px';
+    draft.style.display = 'block';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (drawing) {
+      const x = Math.min(e.pageX, drawing.startX);
+      const y = Math.min(e.pageY, drawing.startY);
+      const w = Math.abs(e.pageX - drawing.startX);
+      const h = Math.abs(e.pageY - drawing.startY);
+      drawing.el.style.left = x + 'px'; drawing.el.style.top = y + 'px';
+      drawing.el.style.width = w + 'px'; drawing.el.style.height = h + 'px';
+    } else if (resizing) {
+      const box = document.querySelector('.hl-box[data-hl-id="' + resizing.id + '"]');
+      if (!box) return;
+      box.style.width = Math.max(20, resizing.startW + (e.pageX - resizing.startX)) + 'px';
+      box.style.height = Math.max(20, resizing.startH + (e.pageY - resizing.startY)) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', (e) => {
+    if (drawing) {
+      const draft = drawing.el;
+      const w = parseInt(draft.style.width);
+      const h = parseInt(draft.style.height);
+      if (w >= 12 && h >= 12) createHlBox(parseInt(draft.style.left), parseInt(draft.style.top), w, h);
+      draft.style.display = 'none';
+      drawing = null;
+    }
+    if (resizing) resizing = null;
+  });
+
+  let hlIdSeq = 0;
+  // 對齊既有框的最大 id（重新打開存檔時用）
+  document.querySelectorAll('.hl-box[data-hl-id]').forEach(b => {
+    const m = (b.getAttribute('data-hl-id') || '').match(/(\d+)$/);
+    if (m) hlIdSeq = Math.max(hlIdSeq, parseInt(m[1]));
+  });
+  // 為舊版（未帶 inline onclick）的 close 按鈕補上 onclick，確保匯出後重新打開仍可刪除
+  document.querySelectorAll('.hl-box .hl-close').forEach(btn => {
+    if (!btn.getAttribute('onclick')) {
+      btn.setAttribute('onclick', "event.stopPropagation();this.closest('.hl-box').remove();");
+    }
+  });
+  function createHlBox(x, y, w, h) {
+    const id = 'hl-' + (++hlIdSeq);
+    const box = document.createElement('div');
+    box.className = 'hl-box';
+    box.setAttribute('data-hl-id', id);
+    box.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;';
+    // 使用 inline 屬性：匯出 HTML 後重新打開仍可刪除／縮放
+    box.innerHTML =
+      '<div class="hl-border"></div>' +
+      '<div class="hl-corner tl"></div><div class="hl-corner tr"></div>' +
+      '<div class="hl-corner bl"></div><div class="hl-corner br"></div>' +
+      '<button class="hl-close" title="刪除標記" ' +
+        'onclick="event.stopPropagation();this.closest(\'.hl-box\').remove();">×</button>' +
+      '<div class="hl-resize" title="拖曳調整大小"></div>';
+    document.body.appendChild(box);
+  }
+
+  // ── Note 便利貼 ──
+  let noteMode = false;
+  let noteIdSeq = 0;
+
+  function toggleNote() {
+    noteMode = !noteMode;
+    const btn = document.getElementById('toggle-note');
+    if (noteMode) {
+      if (editMode) toggleEdit();
+      if (markMode) toggleMark();
+      btn.textContent = '🔒 退出貼 Note';
+      btn.classList.add('active');
+      document.body.classList.add('note-mode');
+    } else {
+      btn.textContent = '📝 貼 Note';
+      btn.classList.remove('active');
+      document.body.classList.remove('note-mode');
+    }
+  }
+
+  // 點頁面任意處放 note（note 模式才生效）
+  document.addEventListener('click', (e) => {
+    if (!noteMode) return;
+    if (sidebarEl() && sidebarEl().contains(e.target)) return;
+    if (e.target.closest('.note-marker')) return;
+    createNote(e.pageX, e.pageY);
+  });
+
+  // ── 拖曳 note 標記 ──
+  let noteDrag = null;
+
+  document.addEventListener('mousedown', (e) => {
+    const marker = e.target.closest('.note-marker');
+    if (!marker) return;
+    // 點到 popup 內（含 textarea、按鈕、resize 把手）不啟動拖曳
+    if (e.target.closest('.note-popup')) return;
+    e.preventDefault();
+    noteDrag = {
+      marker,
+      startX: e.pageX,
+      startY: e.pageY,
+      startLeft: parseInt(marker.style.left) || 0,
+      startTop: parseInt(marker.style.top) || 0,
+      moved: false
+    };
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!noteDrag) return;
+    const dx = e.pageX - noteDrag.startX;
+    const dy = e.pageY - noteDrag.startY;
+    if (!noteDrag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+    if (!noteDrag.moved) {
+      noteDrag.moved = true;
+      noteDrag.marker.classList.add('is-dragging');
+    }
+    noteDrag.marker.style.left = (noteDrag.startLeft + dx) + 'px';
+    noteDrag.marker.style.top  = (noteDrag.startTop  + dy) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!noteDrag) return;
+    if (noteDrag.moved) {
+      noteDrag.marker.classList.remove('is-dragging');
+      // 標記剛拖曳過，下一個 click 略過 toggle
+      noteDrag.marker.dataset.justDragged = '1';
+      const m = noteDrag.marker;
+      setTimeout(() => { delete m.dataset.justDragged; }, 0);
+    }
+    noteDrag = null;
+  });
+
+  function createNote(x, y, content = '') {
+    const id = 'note-' + (++noteIdSeq);
+    const note = document.createElement('div');
+    note.className = 'note-marker open';
+    note.setAttribute('data-note-id', id);
+    note.style.left = (x - 14) + 'px';
+    note.style.top = (y - 14) + 'px';
+    // 用內聯 onclick 確保匯出後的靜態 HTML 也能用；同時忽略剛拖曳完的 click
+    note.setAttribute('onclick',
+      "if(this.dataset.justDragged)return;" +
+      "if(!event.target.closest('.note-popup'))this.classList.toggle('open');"
+    );
+    note.innerHTML =
+      '<div class="note-popup">' +
+        '<div class="note-text" contenteditable="true">' + content + '</div>' +
+        '<div class="note-actions">' +
+          '<button class="note-btn" onclick="this.closest(\'.note-marker\').classList.remove(\'open\')">完成</button>' +
+          '<button class="note-btn delete" onclick="if(confirm(\'刪除此 Note？\'))this.closest(\'.note-marker\').remove()">🗑️ 刪除</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(note);
+    setTimeout(() => {
+      const txt = note.querySelector('.note-text');
+      txt.focus();
+    }, 50);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const openNote = document.querySelector('.note-marker.open');
+      if (openNote) { openNote.classList.remove('open'); return; }
+      if (noteMode) toggleNote();
+      else if (markMode) toggleMark();
+      else if (editMode) toggleEdit();
+    }
+  });
+
+  function enableEditing() {
+    document.querySelectorAll(
+      'h1, h2, h3, h4, .tag, .lead,' +
+      '.container > p, section p, .quote, .arch-io-title, .arch-io-group,' +
+      '.arch-title, .arch-pill, .arch-body, .callout, td, th, pre, .pf-text,' +
+      '.flow-title, .flow-desc, .rule-title, .rule > p, .tldr .label,' +
+      '.col-label, .sub, .why-col h4, .why-col p, .why-col li,' +
+      '.score-note, .principle p, .io-col h3, .consult-name, .consult-val, .consult-label,' +
+      '.consult-rank, .consult-section-title, .consult-sub-label, .consult-sub-val,' +
+      '.consult-subblock-desc, .consult-bullets li, .consult-status,' +
+      '.rerank-suggestion, .rerank-reason,' +
+      '.hero p, .hero span, .hero h1, .sublead, .small-label,' +
+      '.se-title, .se-field-name, .se-field-source, .se-field-desc,' +
+      '.pc-label, .pc-title, .pc-card li,' +
+      '.pf-sub, .pf-info-title, .pf-pkg-name, .pf-pkg-desc,' +
+      '.pf-key-item span, .pf-note-bar span'
+    ).forEach(el => {
+      if (el.closest('#edit-sidebar') || el.closest('#sidebar')) return;
+      el.setAttribute('contenteditable', 'true');
+      el.setAttribute('spellcheck', 'false');
+    });
+  }
+
+  function disableEditing() {
+    document.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+  }
+
+  // ── 選取追蹤 ──
+  let savedRange = null;
+  const sidebarEl = () => document.getElementById('edit-sidebar');
+
+  function isInEditable(node) {
+    if (!node) return false;
+    if (node.nodeType === 3) node = node.parentElement;
+    if (!node) return false;
+    if (sidebarEl() && sidebarEl().contains(node)) return false;
+    return !!(node.closest && node.closest('[contenteditable="true"]'));
+  }
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return;
+    if (isInEditable(range.commonAncestorContainer)) savedRange = range.cloneRange();
+  });
+
+  function applyCmd(e, cmd, value) {
+    e.preventDefault();
+    const sel = window.getSelection();
+    const hasLiveSel = sel && sel.rangeCount > 0 && !sel.getRangeAt(0).collapsed &&
+      isInEditable(sel.getRangeAt(0).commonAncestorContainer);
+    if (!hasLiveSel) {
+      if (!savedRange) return;
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    document.execCommand(cmd, false, value);
+  }
+
+  function e_fmt(e, cmd) { applyCmd(e, cmd, null); }
+  function e_setColor(e, color) { applyCmd(e, 'foreColor', color); }
+
+  // ── 另存新檔 ──
+  function exportHTML() {
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    // Note 的文字區塊匯出後仍要可編輯
+    clone.querySelectorAll('.note-text').forEach(el => el.setAttribute('contenteditable', 'true'));
+    // 關閉所有 note popup，匯出時呈現收合狀態
+    clone.querySelectorAll('.note-marker.open').forEach(el => el.classList.remove('open'));
+    const cloneBody = clone.querySelector('body');
+    cloneBody.classList.remove('editing', 'mark-mode', 'note-mode');
+    const cloneSidebar = clone.querySelector('#edit-sidebar');
+    if (cloneSidebar) cloneSidebar.classList.add('collapsed');
+    const cloneBtn = clone.querySelector('#toggle-edit');
+    if (cloneBtn) { cloneBtn.textContent = '✏️ 開啟編輯模式'; cloneBtn.classList.remove('active'); }
+    const cloneMarkBtn = clone.querySelector('#toggle-mark');
+    if (cloneMarkBtn) { cloneMarkBtn.textContent = '🎯 框選重點'; cloneMarkBtn.classList.remove('active'); }
+    const cloneNoteBtn = clone.querySelector('#toggle-note');
+    if (cloneNoteBtn) { cloneNoteBtn.textContent = '📝 貼 Note'; cloneNoteBtn.classList.remove('active'); }
+    const cloneNotice = clone.querySelector('#edit-notice');
+    if (cloneNotice) cloneNotice.style.display = 'none';
+    const cloneDraft = clone.querySelector('#hl-draft');
+    if (cloneDraft) cloneDraft.style.display = 'none';
+    const fmtSec = clone.querySelector('#format-section');
+    if (fmtSec) { fmtSec.style.opacity = '0.4'; fmtSec.style.pointerEvents = 'none'; }
+    const colSec = clone.querySelector('#color-section');
+    if (colSec) { colSec.style.opacity = '0.4'; colSec.style.pointerEvents = 'none'; }
+
+    const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'headhunter_llm_reranking_edited_' + new Date().toISOString().slice(0,10) + '.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+</script>
+
+
+
+<div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 1009px; top: 3047px;"><div class="note-popup" style="width: 428px; height: 398px;"><div class="note-text" contenteditable="true"><span style="letter-spacing: 0.16px;">------------------------------------------------------------------------</span>
+先讓 LLM 協助做「成功條件假說萃取」，再人為將框架收斂
+------------------------------------------------------------------------
+
+歷史案件 + 顧問資料 + 主管決策 + 成交/推薦結果
+        ↓
+LLM 逐案判讀：本案可能看重哪些成功條件？
+        ↓
+產出每案的成功條件標籤與理由
+        ↓
+把所有標籤彙整、分群、統計
+        ↓
+形成第一版成功條件框架
+        ↓
+再用命中率、主管回饋、成交結果修正</div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div><div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 1042px; top: 3046px;"><div class="note-popup" style="width: 802px; height: 559px;"><div class="note-text" contenteditable="true"><h3 nodeid="be83ccf9-8db5-45e6-a24b-f9530bdea581" draggable="false" data-pm-slice="1 2 []" data-en-clipboard="true" spellcheck="false">1. 從 JD 文字中抽取候選成功條件</h3><div draggable="false">LLM 先不要直接判斷誰最適合，而是先列出可能影響成功的條件。</div><div draggable="false">例如輸入：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">職缺：海外業務總監</div><div data-plaintext="true">產業：醫療器材</div><div data-plaintext="true">JD：需負責歐洲代理商開發、醫療通路管理、跨國團隊協作，</div><div data-plaintext="true">並具備 MDR / CE 法規理解。</div></div><div draggable="false"><br></div><div draggable="false">LLM 可能輸出：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">候選成功條件：</div><div data-plaintext="true">1. 醫療器材產業經驗</div><div data-plaintext="true">2. 海外業務 / 通路開發經驗</div><div data-plaintext="true">3. 歐洲市場或代理商管理經驗</div><div data-plaintext="true">4. 法規敏感產業理解</div><div data-plaintext="true">5. 高階業務主管人才操作經驗</div></div><div draggable="false">「生成可能條件」，不是最後結論。</div><h3 nodeid="cba30963-7537-4097-8e78-611311786003" draggable="false" spellcheck="false">2. 判斷每個成功條件的相對重要性</h3><div draggable="false">接著 LLM 根據 JD 線索給出權重判斷。</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件推測：</div><div data-plaintext="true">- 海外業務 / 通路開發經驗：高</div><div data-plaintext="true">- 醫療器材產業經驗：高</div><div data-plaintext="true">- 歐洲市場經驗：中高</div><div data-plaintext="true">- 法規理解：中</div><div data-plaintext="true">- 純高階主管操作經驗：中</div><div data-plaintext="true"><br></div><div data-plaintext="true">理由：</div><div data-plaintext="true">JD 中核心任務集中在歐洲代理商開發與醫療通路管理，</div><div data-plaintext="true">因此不能只看醫療器材產業，也要看海外業務拓展經驗。</div></div><div draggable="false">LLM 根據資料判斷，而不是完全依賴人事先定好的模板。</div><h3 nodeid="c04c7a9b-fc8f-4cb0-a9eb-c46a4f8a1b95" draggable="false" spellcheck="false">3. 對照歷史相似案件找模式</h3><div draggable="false">如果資料包裡提供歷史相似案例，LLM 可以進一步觀察：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">歷史相似案件中：</div><div data-plaintext="true">- 成功分案多由具備海外業務 / 醫療器材經驗的顧問承接</div><div data-plaintext="true">- 單純做過醫療器材但缺少海外業務經驗的顧問，推薦成功率較低</div><div data-plaintext="true">- 曾做過歐洲市場或代理商職缺的顧問，主管實際採納率較高</div></div><div draggable="false">這一步就開始接近「資料導向」判斷。</div><div draggable="false">LLM 只是閱讀與歸納。如果要更嚴謹，這些結論應該由 SQL / Python / 統計模型先算出來，再交給 LLM 解讀。</div><h3 nodeid="34c3f88f-f35b-4c86-b0af-da2d03cfbca4" draggable="false" spellcheck="false">4. 產出「成功條件假設」，而不是直接產出真理</h3><div draggable="false">LLM 輸出時使用這種格式：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件假設：</div><div data-plaintext="true">1. 海外業務 / 通路開發經驗應為第一優先</div><div data-plaintext="true">2. 醫療器材產業經驗為第二優先</div><div data-plaintext="true">3. 法規理解是加分條件，但不應單獨主導排序</div><div data-plaintext="true"><br></div><div data-plaintext="true">信心程度：中高</div><div data-plaintext="true"><br></div><div data-plaintext="true">需要驗證：</div><div data-plaintext="true">- 歷史醫療器材海外業務案中，主管實際選擇的顧問是否集中在海外業務經驗強者？</div><div data-plaintext="true">- 成交或推薦成功案例是否也支持這個判斷？</div></div></div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div>
+
+</body></html>
