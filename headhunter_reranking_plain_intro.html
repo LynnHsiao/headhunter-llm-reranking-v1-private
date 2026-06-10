@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>獵才智慧派案系統 ｜ 白話導讀</title>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --primary-light: #2c5282;
+    --accent: #c97a3e;
+    --accent-light: #e8a86b;
+    --success: #2d6a4f;
+    --warning: #b08043;
+    --danger: #8b3a3a;
+    --text: #2a2a2a;
+    --text-sub: #555;
+    --text-mute: #888;
+    --bg: #faf8f3;
+    --bg-card: #ffffff;
+    --bg-soft: #f5f1e8;
+    --bg-highlight: #fdf6e3;
+    --border: #e2dccc;
+    --border-strong: #c7bda5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.8;
+    letter-spacing: 0.01em;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 100px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+    padding: 56px 0 48px;
+    margin-bottom: 0;
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+  .hero .brand {
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-light);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-size: 30px;
+    line-height: 1.4;
+    margin: 0 0 16px;
+    font-weight: 700;
+  }
+  .hero p {
+    font-size: 16px;
+    color: #dfe6ef;
+    margin: 0;
+    max-width: 640px;
+  }
+  .read-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.22);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #eef2f7;
+  }
+
+  /* Section */
+  section { margin-top: 48px; }
+  .sec-num {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  h2 {
+    font-size: 22px;
+    color: var(--primary);
+    margin: 0 0 18px;
+    line-height: 1.4;
+    border-bottom: 2px solid var(--border-strong);
+    padding-bottom: 12px;
+  }
+  h3 { font-size: 18px; color: var(--primary-light); margin: 28px 0 10px; }
+  p { margin: 0 0 16px; }
+  .lead { font-size: 17px; color: var(--text); }
+  strong { color: var(--primary); }
+  .muted { color: var(--text-mute); font-size: 14px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin: 18px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .soft { background: var(--bg-soft); border-color: var(--border-strong); }
+  .highlight { background: var(--bg-highlight); border-color: var(--accent-light); }
+
+  /* Score progress */
+  .score-track {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 24px 0 8px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+  }
+  .score-node {
+    flex: 1;
+    padding: 18px 14px;
+    text-align: center;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+  }
+  .score-node:last-child { border-right: 0; }
+  .score-node .label { font-size: 13px; color: var(--text-mute); display: block; margin-bottom: 6px; }
+  .score-node .val { font-size: 30px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+  .score-node .sub { font-size: 13px; color: var(--text-sub); display: block; margin-top: 6px; }
+  .score-node.now .val { color: var(--accent); }
+  .score-node.goal { background: var(--primary); }
+  .score-node.goal .label { color: var(--accent-light); }
+  .score-node.goal .val { color: #fff; }
+  .score-node.goal .sub { color: #cdd6e1; }
+
+  /* Quiz metaphor */
+  .quiz {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .quiz-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    background: var(--bg-card);
+  }
+  .quiz-box .tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .quiz-box.recall .tag { background: #e8f0e9; color: var(--success); }
+  .quiz-box.rank .tag { background: #f3e7da; color: var(--accent); }
+  .quiz-box h4 { margin: 0 0 8px; font-size: 16px; color: var(--primary); }
+  .quiz-box p { font-size: 14px; color: var(--text-sub); margin: 0; }
+
+  .punch {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary);
+    border-left: 4px solid var(--accent);
+    padding: 4px 0 4px 18px;
+    margin: 22px 0;
+    line-height: 1.7;
+  }
+
+  /* Story */
+  .story-flow { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .story-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .story-row .who {
+    flex-shrink: 0;
+    width: 96px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-mute);
+  }
+  .story-row .what { font-size: 14px; color: var(--text); }
+  .story-row.wrong { border-color: #e3c4c4; background: #fdf3f3; }
+  .story-row.right { border-color: #c4ddc9; background: #f3faf4; }
+
+  /* Method table */
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-soft); color: var(--primary); font-size: 13px; letter-spacing: 0.03em; }
+  td .verdict { font-weight: 700; white-space: nowrap; }
+  .v-good { color: var(--success); }
+  .v-warn { color: var(--warning); }
+  .v-meh { color: var(--text-mute); }
+
+  /* Ceiling */
+  .ceiling { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .ceiling-card {
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    padding: 20px;
+    background: var(--bg-card);
+  }
+  .ceiling-card .cap {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--danger);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .ceiling-card h4 { margin: 0 0 8px; font-size: 16px; color: var(--primary); }
+  .ceiling-card p { font-size: 14px; color: var(--text-sub); margin: 0; }
+
+  /* Next steps */
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: 0; }
+  .step .idx {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 800;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step.secondary .idx { background: var(--primary-light); }
+  .step.last .idx { background: var(--text-mute); }
+  .step .body h4 { margin: 0 0 6px; font-size: 16px; color: var(--primary); }
+  .step .body p { margin: 0; font-size: 14px; color: var(--text-sub); }
+
+  /* Final quote */
+  .final {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 12px;
+    padding: 32px 34px;
+    margin-top: 40px;
+  }
+  .final .q-mark { font-size: 40px; color: var(--accent-light); line-height: 0.5; }
+  .final p { font-size: 18px; line-height: 1.7; margin: 14px 0 0; color: #eef2f7; }
+  .final strong { color: #fff; }
+
+  .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .footer p { font-size: 13px; color: var(--text-mute); margin: 0 0 6px; }
+
+  @media (max-width: 720px) {
+    .quiz, .ceiling { grid-template-columns: 1fr; }
+    .score-track { flex-direction: column; }
+    .score-node { border-right: 0; border-bottom: 1px solid var(--border); }
+    .hero h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="brand">獵才智慧派案系統</div>
+    <h1>系統現在做到哪、卡在哪、接下來要往哪走</h1>
+    <p>這是一份白話導讀，不需要任何技術背景就能看懂。我們用一個「考選擇題」的比喻，把整個專案的進度與下一步講清楚。</p>
+    <div class="read-hint">⏱️ 約 5 分鐘讀完 ｜ 寫給主管、業務與跨部門同事</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 1 -->
+  <section>
+    <span class="sec-num">01</span>
+    <h2>這個系統到底在幹嘛</h2>
+    <p class="lead">獵才公司每天有一堆「委託案」——客戶要找人；手上也有一群獵頭顧問。<strong>主管要決定每個案子派給哪位顧問。</strong></p>
+    <p>我們做的這套系統，目標很單純：<strong>自動幫每個案子推薦「最適合的前三名顧問」</strong>，讓主管不用從頭翻名單，而是有一個好的起點。</p>
+    <div class="card soft">
+      <p style="margin:0;">衡量好壞的方式也很單純：系統推薦的<strong>前三名裡，有沒有包含「主管最後真的選的那個人」</strong>。有，就算命中。我們希望 100 個案子裡有 70 個能命中——這就是大家常聽到的「<strong>70% 目標</strong>」。</p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <span class="sec-num">02</span>
+    <h2>現在考幾分</h2>
+    <p>把目標放成 100 個案子要中 70 個。目前的進度是這樣：</p>
+    <div class="score-track">
+      <div class="score-node">
+        <span class="label">最陽春版本</span>
+        <span class="val">48<small style="font-size:16px;">分</small></span>
+        <span class="sub">起點</span>
+      </div>
+      <div class="score-node now">
+        <span class="label">試到目前最好（老實算）</span>
+        <span class="val">58<small style="font-size:16px;">分</small></span>
+        <span class="sub">已往前推一段</span>
+      </div>
+      <div class="score-node goal">
+        <span class="label">產品目標</span>
+        <span class="val">70<small style="font-size:16px;">分</small></span>
+        <span class="sub">還差一段路</span>
+      </div>
+    </div>
+    <p class="muted">註：另有一個版本帳面上是 66 分，但那是「把候選範圍縮小」換來的——縮小時會不小心把主管真正選的人踢出名單、乾脆不計分，所以分數偏高。老實、不灌水的算法目前大約 58 分。</p>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <span class="sec-num">03</span>
+    <h2>用一個比喻看懂全局：這像一場選擇題考試</h2>
+    <p>派案這件事，可以拆成兩個完全不同的動作：</p>
+    <div class="quiz">
+      <div class="quiz-box recall">
+        <span class="tag">第一步 ｜ 召回</span>
+        <h4>把正確答案放進選項</h4>
+        <p>出題時，要先確保正確的顧問有被放進「候選的前五名」。如果他連選項都沒進，後面再厲害也沒用。</p>
+      </div>
+      <div class="quiz-box rank">
+        <span class="tag">第二步 ｜ 排序</span>
+        <h4>在選項裡挑出最可能的</h4>
+        <p>把已經進到前五名的顧問，重新排好順序，努力把對的人推進前三名。</p>
+      </div>
+    </div>
+    <p class="punch">如果正確答案根本沒被放進選項，你再怎麼會猜，也選不到。</p>
+    <p>這就是整個專案最重要的一句話。我們過去幾乎把所有力氣花在練「怎麼猜得準」（排序），但有<strong>三分之一的案子，正確答案從一開始就沒進選項</strong>（沒進前五名）。對這些案子，排序練到神也沒用。</p>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <span class="sec-num">04</span>
+    <h2>一個真實的誤判，看懂系統的脾氣</h2>
+    <p>有一筆某製造業客戶的案子，職缺是「業務開發主管／廠務管理主管」。系統與主管的判斷分岔了：</p>
+    <div class="story-flow">
+      <div class="story-row wrong">
+        <span class="who">系統推薦</span>
+        <span class="what"><strong>顧問 A</strong> 排第一名</span>
+      </div>
+      <div class="story-row right">
+        <span class="who">主管實選</span>
+        <span class="what"><strong>顧問 B</strong>（而系統把 B 排到了第 12 名）</span>
+      </div>
+      <div class="story-row">
+        <span class="who">原因</span>
+        <span class="what">顧問 A 剛好做過<strong>一個</strong>很像的「廠長」案子，光這一個案子就佔了她相似度分數的 <strong>53%</strong>。但她整體其實橫跨財務、人資、行銷等多個領域——不該因為「一個」剛好很像的案子，就被自動排第一。</span>
+      </div>
+    </div>
+    <div class="card highlight">
+      <p style="margin:0;">這個故事點出系統的核心毛病：<strong>它會把「剛好做過一個像的案子」誤當成「整體就很適合」</strong>。修正的方向是——要看顧問<strong>整體穩定的專長</strong>，而不是被單一筆相似案件帶著走。這也是目前最有效的一項改良。</p>
+    </div>
+    <p class="muted">說明：為保護當事人，此處顧問與公司名稱均已匿名，數字與情節取自真實實驗紀錄。</p>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <span class="sec-num">05</span>
+    <h2>試過的方法，哪些有用、哪些沒用</h2>
+    <table>
+      <thead>
+        <tr><th style="width:30%;">我們試了什麼</th><th>白話解釋</th><th style="width:16%;">結果</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>看顧問<strong>整體實力</strong>，不只看單一筆像的舊案</td>
+          <td>就是上一個故事講的修正：別被「一個剛好很像的案子」帶偏。</td>
+          <td><span class="verdict v-good">✓ 最有效</span></td>
+        </tr>
+        <tr>
+          <td>把<strong>候選池縮小</strong>到單一課</td>
+          <td>候選人從十幾個縮到八個，前三當然更容易命中。</td>
+          <td><span class="verdict v-warn">△ 灌水</span><br><span class="muted">會誤刪主管真正選的人，已喊停</span></td>
+        </tr>
+        <tr>
+          <td>參考<strong>主管過去的派案習慣</strong></td>
+          <td>系統學「這主管以前都派誰」。</td>
+          <td><span class="verdict v-warn">△ 要設上限</span><br><span class="muted">否則會把真正最強的人擠下去</span></td>
+        </tr>
+        <tr>
+          <td>換<strong>更聰明的文字比對引擎</strong></td>
+          <td>升級語意理解，更懂兩段文字像不像。</td>
+          <td><span class="verdict v-meh">— 只推進前五</span><br><span class="muted">推不進前三</span></td>
+        </tr>
+        <tr>
+          <td>用<strong>職務類別</strong>重排前五名</td>
+          <td>按「這是業務職還是財務職」重新排。</td>
+          <td><span class="verdict v-meh">— 幾乎沒用</span><br><span class="muted">只多約 0.5 分</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="punch">一句話收斂：「看整體實力」走對了，其餘的不是灌水、就是只能微調。</p>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <span class="sec-num">06</span>
+    <h2>最關鍵的領悟：我們撞到兩面天花板</h2>
+    <p>這是這次重讀實驗紀錄後，最該往上報的事——目前的做法存在兩個結構性上限：</p>
+    <div class="ceiling">
+      <div class="ceiling-card">
+        <div class="cap">63<small style="font-size:18px;">分</small></div>
+        <h4>天花板一：比對能力本身不夠強</h4>
+        <p>我們做了極端測試：<strong>假設事先偷看答案</strong>、直接告訴系統主管會從哪個課選人，把範圍縮到最小。結果也只有 63 分。代表就算候選範圍完美，光靠現在的文字比對，也排不到 70。</p>
+      </div>
+      <div class="ceiling-card">
+        <div class="cap">65<small style="font-size:18px;">分</small></div>
+        <h4>天花板二：光排前五，最多到這</h4>
+        <p>現在「對的人有擠進前五名」的案子只佔約 65%。所以就算把每個案子的前五名都排到完美，前三命中率天花板就是 65 分——因為剩下三分之一的案子，對的人連前五都沒進。</p>
+      </div>
+    </div>
+    <p class="punch">兩面天花板加起來的結論：要破 70，不能再只練「怎麼排」，必須去解「怎麼讓對的人先進前五」。</p>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <span class="sec-num">07</span>
+    <h2>接下來該做什麼</h2>
+    <p>按照該先做的順序，下一階段的重點會明顯不同於過去：</p>
+    <div class="card">
+      <div class="step">
+        <div class="idx">1</div>
+        <div class="body">
+          <h4>先把選項出對（這是主線）</h4>
+          <p>想辦法讓「對的顧問」更容易進到前五名：把案子的需求描述寫得更精準、補齊那些資料太單薄的顧問檔案。<strong>這一步不做，70 分永遠到不了。</strong></p>
+        </div>
+      </div>
+      <div class="step secondary">
+        <div class="idx">2</div>
+        <div class="body">
+          <h4>補上「文字看不到」的營運資料</h4>
+          <p>到了 58 分這個瓶頸，缺的<strong>不是更聰明的文字模型，而是營運面的事實</strong>：這位顧問現在忙不忙、手上案子滿不滿、最近有沒有在接案。主管派案本來就會看「誰現在有空」，但系統目前看不到這些。</p>
+        </div>
+      </div>
+      <div class="step secondary">
+        <div class="idx">3</div>
+        <div class="body">
+          <h4>把「服務過同一個客戶」單獨拉出來</h4>
+          <p>顧問是否服務過這個客戶，是很有用的線索，但它跟「專業是否匹配」是兩回事。應該把它獨立標示出來、當成給主管的提醒項，而不是混進相似度分數裡。</p>
+        </div>
+      </div>
+      <div class="step last">
+        <div class="idx">4</div>
+        <div class="body">
+          <h4>最後才精修「怎麼排」</h4>
+          <p>等前五名的命中率先拉上來，再來把前三排好。<strong>順序不能反</strong>：在前五只有 75% 準時練排序，天花板是 65 分；等前五拉到 85%，同樣的排序就能換到 70 分以上。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <div class="final">
+      <div class="q-mark">&ldquo;</div>
+      <p>我們已經證明：靠調整<strong>排序</strong>，這套系統的天花板大約在 <strong>65 分</strong>。要突破 70 分目標，真正要解的是<strong>「讓對的顧問先進入候選名單」</strong>，以及補上<strong>「顧問現在能不能接案」</strong>這類營運資料——而不是再優化文字比對。下一階段的重點，會從「排序」轉向「召回」。</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>本導讀為非技術版，所有數字取自 2026-06-09／06-10 的實驗紀錄；為保護當事人，顧問與客戶名稱均已匿名。</p>
+    <p>技術細節（17 個方案的完整指標、評估口徑、工程任務拆解）將另出一份工程版文件。</p>
+  </div>
+
+</div>
+
+</body>
+</html>

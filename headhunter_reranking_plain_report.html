@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>獵才智慧派案系統 ｜ 測試紀錄白話版</title>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --primary-light: #2c5282;
+    --accent: #c97a3e;
+    --accent-light: #e8a86b;
+    --success: #2d6a4f;
+    --warning: #b08043;
+    --danger: #8b3a3a;
+    --text: #2a2a2a;
+    --text-sub: #555;
+    --text-mute: #888;
+    --bg: #faf8f3;
+    --bg-card: #ffffff;
+    --bg-soft: #f5f1e8;
+    --bg-highlight: #fdf6e3;
+    --border: #e2dccc;
+    --border-strong: #c7bda5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.8;
+    letter-spacing: 0.01em;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px 100px; }
+
+  .hero { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: #fff; padding: 52px 0 44px; }
+  .hero-inner { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  .hero .brand { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-light); font-weight: 700; margin-bottom: 14px; }
+  .hero h1 { font-size: 30px; line-height: 1.4; margin: 0 0 14px; font-weight: 700; }
+  .hero p { font-size: 16px; color: #dfe6ef; margin: 0; max-width: 700px; }
+  .read-hint { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); padding: 8px 16px; border-radius: 999px; font-size: 13px; color: #eef2f7; }
+
+  section { margin-top: 46px; }
+  .sec-num { display: inline-block; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 6px; }
+  h2 { font-size: 22px; color: var(--primary); margin: 0 0 18px; line-height: 1.4; border-bottom: 2px solid var(--border-strong); padding-bottom: 12px; }
+  h3 { font-size: 18px; color: var(--primary-light); margin: 26px 0 10px; }
+  p { margin: 0 0 16px; }
+  .lead { font-size: 17px; }
+  strong { color: var(--primary); }
+  .muted { color: var(--text-mute); font-size: 14px; }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; margin: 18px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+  .soft { background: var(--bg-soft); border-color: var(--border-strong); }
+  .highlight { background: var(--bg-highlight); border-color: var(--accent-light); }
+
+  .punch { font-size: 17px; font-weight: 700; color: var(--primary); border-left: 4px solid var(--accent); padding: 4px 0 4px 18px; margin: 22px 0; line-height: 1.7; }
+
+  .score-track { display: flex; gap: 0; margin: 22px 0 8px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-strong); }
+  .score-node { flex: 1; padding: 18px 14px; text-align: center; background: var(--bg-card); border-right: 1px solid var(--border); }
+  .score-node:last-child { border-right: 0; }
+  .score-node .label { font-size: 13px; color: var(--text-mute); display: block; margin-bottom: 6px; }
+  .score-node .val { font-size: 30px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+  .score-node .sub { font-size: 13px; color: var(--text-sub); display: block; margin-top: 6px; }
+  .score-node.now .val { color: var(--accent); }
+  .score-node.goal { background: var(--primary); }
+  .score-node.goal .label { color: var(--accent-light); }
+  .score-node.goal .val { color: #fff; }
+  .score-node.goal .sub { color: #cdd6e1; }
+
+  .glossary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+  .term { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: var(--bg-card); }
+  .term .t { font-weight: 700; color: var(--primary); font-size: 15px; display: block; margin-bottom: 4px; }
+  .term .d { font-size: 14px; color: var(--text-sub); }
+  .term .en { font-size: 12px; color: var(--text-mute); font-style: italic; }
+  .term.eng { border-color: var(--accent-light); background: var(--bg-highlight); }
+
+  .case { border-left: 4px solid var(--border-strong); padding: 4px 0 4px 18px; margin: 16px 0; }
+  .case.hit { border-color: var(--success); }
+  .case.miss { border-color: var(--warning); }
+  .case.nodata { border-color: var(--text-mute); }
+  .case .ct { font-weight: 700; color: var(--primary); font-size: 15px; }
+  .case .cd { font-size: 14px; color: var(--text-sub); margin-top: 4px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+  .badge.g { background: #e8f0e9; color: var(--success); }
+  .badge.w { background: #f5ecd8; color: var(--warning); }
+  .badge.n { background: #ececec; color: var(--text-mute); }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 860px; }
+  th, td { text-align: left; padding: 10px 11px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { background: var(--primary); color: #fff; font-size: 12.5px; font-weight: 700; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) { background: var(--bg-soft); }
+  .row-name { font-weight: 600; color: var(--text); }
+  .gap-flag { font-size: 12px; color: var(--danger); font-weight: 700; }
+  .best-honest { background: #eaf3ec !important; }
+  .killed td { color: var(--text-mute); }
+  .eng-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; }
+  .eng-tag.lex { background: #efe6d8; color: #8a6d3b; }
+  .eng-tag.dense { background: #dde8f0; color: var(--primary-light); }
+  .ship { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 5px; }
+  .ship.yes { background: #e8f0e9; color: var(--success); }
+  .ship.no { background: #f3e1e1; color: var(--danger); }
+  .ship.diag { background: #ececec; color: var(--text-mute); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-sub); margin: 10px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 2px solid var(--border-strong); margin-top: 20px; }
+  .tab-button { border: 0; border-bottom: 3px solid transparent; background: transparent; padding: 12px 13px; color: var(--text-mute); cursor: pointer; white-space: nowrap; font: inherit; font-size: 13.5px; font-weight: 600; }
+  .tab-button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; padding-top: 22px; }
+  .tab-panel.active { display: block; }
+
+  .line-intro { background: var(--bg-highlight); border: 1px solid var(--accent-light); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+  .line-intro .q { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; margin-bottom: 6px; }
+  .line-intro .q .eng-tag { margin-left: 8px; }
+  .line-intro p { margin: 0; font-size: 15px; }
+
+  .plan { border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin: 14px 0; background: var(--bg-card); }
+  .plan .ph { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .plan .pn { font-weight: 700; color: var(--primary); font-size: 16px; }
+  .plan .metrics { font-size: 13px; color: var(--text-sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plan .metrics b { color: var(--accent); font-size: 15px; }
+  .plan .do { font-size: 14px; color: var(--text-sub); margin: 0 0 8px; }
+  .plan .so { font-size: 14px; color: var(--text); margin: 0; }
+  .plan .so::before { content: "→ "; color: var(--accent); font-weight: 700; }
+  .plan.win { border-color: var(--success); border-left: 4px solid var(--success); }
+  .plan.warn { border-color: var(--warning); border-left: 4px solid var(--warning); }
+  .plan.killed { border-color: var(--danger); border-left: 4px solid var(--danger); background: #fcf5f5; }
+  .kill-note { font-size: 13px; color: var(--danger); font-weight: 700; margin-top: 8px; }
+
+  .takeaway { background: var(--bg-soft); border-radius: 8px; padding: 14px 18px; margin-top: 16px; font-size: 14px; }
+  .takeaway b { color: var(--primary); }
+
+  .ceiling { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .ceiling-card { border: 1px solid var(--border-strong); border-radius: 10px; padding: 20px; background: var(--bg-card); }
+  .ceiling-card .cap { font-size: 34px; font-weight: 800; color: var(--danger); line-height: 1; margin-bottom: 8px; }
+  .ceiling-card h4 { margin: 0 0 8px; font-size: 16px; color: var(--primary); }
+  .ceiling-card p { font-size: 14px; color: var(--text-sub); margin: 0; }
+
+  .step { display: flex; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: 0; }
+  .step .idx { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+  .step.secondary .idx { background: var(--primary-light); }
+  .step.last .idx { background: var(--text-mute); }
+  .step .body h4 { margin: 0 0 6px; font-size: 16px; color: var(--primary); }
+  .step .body p { margin: 0; font-size: 14px; color: var(--text-sub); }
+
+  .final { background: var(--primary); color: #fff; border-radius: 12px; padding: 32px 34px; margin-top: 40px; }
+  .final .q-mark { font-size: 40px; color: var(--accent-light); line-height: 0.5; }
+  .final p { font-size: 18px; line-height: 1.7; margin: 14px 0 0; color: #eef2f7; }
+  .final strong { color: #fff; }
+
+  .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .footer p { font-size: 13px; color: var(--text-mute); margin: 0 0 6px; }
+
+  @media (max-width: 760px) {
+    .glossary, .ceiling { grid-template-columns: 1fr; }
+    .score-track { flex-direction: column; }
+    .score-node { border-right: 0; border-bottom: 1px solid var(--border); }
+    .hero h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="brand">獵才智慧派案系統 · 測試紀錄</div>
+    <h1>我們試了 18 種做法，逐一誠實告訴你結果</h1>
+    <p>這是把完整測試紀錄翻成白話的版本：保留所有數據，標明每個方案用哪種比對引擎、是否可上線，並把「帳面好看」與「真正有用」分清楚。不需要技術背景也能讀完。</p>
+    <div class="read-hint">📋 完整版 · 數據與結論均回溯自 2026-06-08～06-10 原始實驗紀錄</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 總覽 -->
+  <section>
+    <span class="sec-num">總覽</span>
+    <h2>30 秒先抓重點</h2>
+    <p class="lead">系統任務：每個委託案，自動推薦<strong>最適合的前三名顧問</strong>。算分方式：前三名裡有沒有<strong>主管最後真的選的那個人</strong>。目標是 100 個案子中 70 個命中。</p>
+    <div class="score-track">
+      <div class="score-node"><span class="label">誠實起點</span><span class="val">48<small style="font-size:16px;">分</small></span><span class="sub">排除洩漏後的 Baseline</span></div>
+      <div class="score-node now"><span class="label">可上線的真實最佳</span><span class="val">58<small style="font-size:16px;">分</small></span><span class="sub">語意引擎 + 完整候選池</span></div>
+      <div class="score-node goal"><span class="label">產品目標</span><span class="val">70<small style="font-size:16px;">分</small></span><span class="sub">還差約 12 分</span></div>
+    </div>
+    <div class="card highlight">
+      <p style="margin:0;"><strong>一個必須先講清楚的誤會：</strong>測試中有個方案帳面衝到 <strong>66 分</strong>，但那是靠「硬切候選池」（把候選人從 14 人縮到 8 人）換來的——而這條路<strong>已經在 2026-06-09 被明確否決、不會上線</strong>（因為它會把主管真正選的人也切掉）。所以對外該講的「可上線真實最佳」是約 <strong>58 分</strong>，不是 66 分。</p>
+    </div>
+    <p class="punch">最重要的一句話：靠「重新排序」最多到 65 分；要破 70，得先解決「讓對的顧問先進入候選名單」，以及補上文字看不到的營運資料。</p>
+  </section>
+
+  <!-- 01 怎麼讀 -->
+  <section>
+    <span class="sec-num">01</span>
+    <h2>怎麼讀這份紀錄：先把術語換成人話</h2>
+    <p>先看懂這張對照表，後面就能無痛閱讀。<strong>最關鍵的是前三格</strong>——它們決定你會不會被漂亮的數字騙到：</p>
+    <div class="glossary">
+      <div class="term"><span class="t">可評估 <span class="en">evaluated</span></span><span class="d">只算「主管選的人有在名單上、資料也齊全」的案子當分母。範圍較小，分數通常偏高。</span></div>
+      <div class="term"><span class="t">全部案子 <span class="en">all groups</span></span><span class="d">用全部 866 案當分母，比較誠實保守。<strong>這兩個數字差越大，灌水越多。</strong></span></div>
+      <div class="term eng"><span class="t">字面比對 <span class="en">lexical · local_tfidf_char_ngram</span></span><span class="d">本機陽春版引擎，比的是「字面、關鍵詞」像不像。<strong>還不是正式 embedding。</strong>方案 1～7 都用它。</span></div>
+      <div class="term eng"><span class="t">語意引擎 <span class="en">dense · OpenAI text-embedding-3-small</span></span><span class="d">正式的 OpenAI 向量模型，懂「語意」而不只比字面。方案 8～12 才換上它。</span></div>
+      <div class="term"><span class="t">同公司洩漏排除</span><span class="d">不准拿「顧問在這家客戶做過的舊案」當推薦理由——那等於用已發生的結果反推。<strong>排除後分數會明顯下降，但才誠實。</strong></span></div>
+      <div class="term"><span class="t">候選池</span><span class="d">每個案子要從「幾位顧問」裡挑。池子越小前三越容易中，但越容易把對的人排除掉。</span></div>
+      <div class="term"><span class="t">整體實力 <span class="en">aggregate</span></span><span class="d">看顧問整體能力，而不是被某一兩個剛好很像的舊案帶偏。</span></div>
+      <div class="term"><span class="t">主管習慣 <span class="en">prior</span></span><span class="d">參考「過去這主管常派誰」。只看案子發生前的紀錄，不偷看未來。後期改用「設上限版」避免它擠掉真正最強的人。</span></div>
+      <div class="term"><span class="t">專長護欄 <span class="en">guardrail</span></span><span class="d">檢查那些「很像的舊案」是不是顧問的穩定主專長；若只是孤立個案就把分數折減。</span></div>
+      <div class="term"><span class="t">硬切單課</span><span class="d">把候選範圍硬縮到單一課。提分快，但會把另一課的顧問完全排除——<strong>已被否決。</strong></span></div>
+    </div>
+    <div class="card highlight">
+      <p style="margin:0;"><strong>這份紀錄最該學會的判讀力：</strong>看到漂亮分數，先問兩件事——它是「可評估」還是「全部案子」？它用的候選池可不可上線？如果「可評估 66 分」是靠「已被否決的硬切候選池」換來的，那 66 分對上線毫無意義。</p>
+    </div>
+  </section>
+
+  <!-- 02 三個真實案例 -->
+  <section>
+    <span class="sec-num">02</span>
+    <h2>先看三個真實案例，建立直覺</h2>
+    <p>「命中」「不能評估」這些概念，用三個真實案例（已匿名）最好懂：</p>
+    <div class="case hit">
+      <div class="ct">案例一：可以評估，也命中了<span class="badge g">命中</span></div>
+      <div class="cd">某農林業客戶，職缺含茶廠主管、研發主管、通路業務主管。主管實際選的顧問本來就在候選名單裡、資料也齊全，所以能算排名——而且系統排第 1 名。這是一個乾淨的「前三命中」。</div>
+    </div>
+    <div class="case miss">
+      <div class="ct">案例二：硬切單課後，反而不能評估了<span class="badge w">被踢出名單</span></div>
+      <div class="cd">某汽車業客戶，職缺是軟體工程師。在「完整候選池」下，主管選的顧問可評估、排第 2 名。但一旦改用「硬切單課」，這位顧問因被分到別課而直接被排除——案子就從「可評估」變成「不能評估」。這就是縮小候選池的隱藏代價，全公司共有 106 個案子遭遇同樣情況。</div>
+    </div>
+    <div class="case nodata">
+      <div class="ct">案例三：資料範圍沒涵蓋答案<span class="badge n">不能評估</span></div>
+      <div class="cd">某科技業客戶，職缺是 Sales。主管選的顧問根本不在這次的 40 位顧問能力資料中，系統無從替他算排名。這種案子不該放進分母——否則扣的不是「系統排錯」的分，而是「資料沒收齊」的分。</div>
+    </div>
+  </section>
+
+  <!-- 03 完整總表 -->
+  <section>
+    <span class="sec-num">03</span>
+    <h2>完整成績總表：18 種做法一次看</h2>
+    <p>每一列都標了<strong>用哪種引擎</strong>與<strong>能不能上線</strong>。重點看「前三·可評估」與「前三·全部」的落差，以及最右邊的「可上線」欄：</p>
+    <div class="legend">
+      <span><span class="eng-tag lex">字面</span>本機 TF-IDF</span>
+      <span><span class="eng-tag dense">語意</span>OpenAI 向量</span>
+      <span><span class="ship yes">可上線</span></span>
+      <span><span class="ship no">已否決</span>硬切候選池</span>
+      <span><span class="ship diag">診斷</span>不可上線</span>
+      <span><span class="gap-flag">⚠</span>灌水幅度</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>測試方案</th>
+            <th>引擎</th>
+            <th class="num">前3<br>可評估</th>
+            <th class="num">前3<br>全部·老實</th>
+            <th class="num">前5<br>可評估</th>
+            <th class="num">候選池</th>
+            <th>可上線</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="row-name">起點：逐案相似（排除同公司洩漏）</td><td><span class="eng-tag lex">字面</span></td><td class="num">48.1%</td><td class="num">47.7%</td><td class="num">64.7%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr><td class="row-name">① 完整池 + 整體實力 40%</td><td><span class="eng-tag lex">字面</span></td><td class="num">52.7%</td><td class="num">52.2%</td><td class="num">66.9%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr><td class="row-name">② 完整池 + 整體實力 80% + 主管習慣</td><td><span class="eng-tag lex">字面</span></td><td class="num">57.0%</td><td class="num">56.5%</td><td class="num">70.1%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr class="killed"><td class="row-name">③ 硬切單課</td><td><span class="eng-tag lex">字面</span></td><td class="num">59.3%</td><td class="num">52.1% <span class="gap-flag">⚠7.3</span></td><td class="num">79.6%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr class="killed"><td class="row-name">④ 硬切 + 整體實力 80%</td><td><span class="eng-tag lex">字面</span></td><td class="num">65.1%</td><td class="num">57.2% <span class="gap-flag">⚠7.9</span></td><td class="num">81.6%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr class="killed"><td class="row-name">⑤ 硬切 + 整體實力 80% + 主管習慣</td><td><span class="eng-tag lex">字面</span></td><td class="num">65.7%</td><td class="num">57.6% <span class="gap-flag">⚠8.1</span></td><td class="num">81.6%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr><td class="row-name">⑥ 完整池 + 專長護欄（＋最佳權重）</td><td><span class="eng-tag lex">字面</span></td><td class="num">49.3→54.3%</td><td class="num">48.9→53.8%</td><td class="num">67.5%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr class="killed"><td class="row-name">⑦ 硬切 + 專長護欄（＋最佳權重）</td><td><span class="eng-tag lex">字面</span></td><td class="num">60.3→65.0%</td><td class="num">52.9→57.0% <span class="gap-flag">⚠</span></td><td class="num">81.5%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr><td class="row-name">⑧ 語意 + 完整池 + 專長護欄</td><td><span class="eng-tag dense">語意</span></td><td class="num">53.9%</td><td class="num">53.4%</td><td class="num">72.5%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr class="best-honest"><td class="row-name">⑨ 語意 + 完整池 + 護欄 + 主管習慣</td><td><span class="eng-tag dense">語意</span></td><td class="num">58.4%</td><td class="num">57.9%</td><td class="num">75.2%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr class="killed"><td class="row-name">⑩ 語意 + 硬切 + 護欄（＋最佳權重）</td><td><span class="eng-tag dense">語意</span></td><td class="num">65.7→66.5%</td><td class="num">57.6→58.3% <span class="gap-flag">⚠8</span></td><td class="num">86.5%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr class="killed"><td class="row-name">⑪ 語意 + 硬切 + 護欄 + 主管習慣（帳面最高）</td><td><span class="eng-tag dense">語意</span></td><td class="num">66.6%</td><td class="num">58.4% <span class="gap-flag">⚠8.2</span></td><td class="num">86.2%</td><td class="num">8 人</td><td><span class="ship no">已否決</span></td></tr>
+          <tr class="best-honest"><td class="row-name">⑫ 語意 + 完整池 + 設上限主管習慣 + 職務重排 <span style="font-size:11px;color:var(--success);font-weight:700;">最新整合版</span></td><td><span class="eng-tag dense">語意</span></td><td class="num">58.4%</td><td class="num">57.9%</td><td class="num">75.1%</td><td class="num">14 人</td><td><span class="ship yes">可上線</span></td></tr>
+          <tr><td class="row-name">診斷：偷看答案（lexical oracle）</td><td><span class="eng-tag lex">字面</span></td><td class="num">63.3%</td><td class="num">62.7%</td><td class="num">80.0%</td><td class="num">7 人</td><td><span class="ship diag">診斷</span></td></tr>
+          <tr><td class="row-name">未完成：換另一種字面算法（BM25）</td><td><span class="eng-tag lex">字面</span></td><td class="num">超時</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td><span class="ship diag">未完成</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">註：候選池「14 人」為完整池平均（11–15 人），「8 人」為硬切單課平均（6–11 人）。所有硬切方案（③④⑤⑦⑩⑪）已在 2026-06-09 定調為「上限測試、不上線」。「全部·老實」用全部 866 案當分母。</p>
+  </section>
+
+  <!-- 04 逐方案 -->
+  <section>
+    <span class="sec-num">04</span>
+    <h2>逐一拆解：18 種做法背後在想什麼</h2>
+    <p>這些測試不是亂槍打鳥，而是沿著幾條清楚的思路在走。每條線都標了用哪種引擎：</p>
+    <nav class="tabs">
+      <button class="tab-button active" data-tab="t0">起點</button>
+      <button class="tab-button" data-tab="t1">①② 完整池加料</button>
+      <button class="tab-button" data-tab="t2">③④⑤ 縮小候選池</button>
+      <button class="tab-button" data-tab="t3">⑥⑦ 專長護欄</button>
+      <button class="tab-button" data-tab="t4">⑧–⑪ 語意引擎</button>
+      <button class="tab-button" data-tab="t5">⑫ 整合版（最新）</button>
+      <button class="tab-button" data-tab="t6">診斷與未完成</button>
+    </nav>
+
+    <!-- 起點 -->
+    <div class="tab-panel active" id="t0">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag lex">字面比對</span></div><p>完全不加技巧，只靠「逐案文字像不像」，誠實能做到幾分？這是後面所有改良的比較基準。</p></div>
+      <div class="plan">
+        <div class="ph"><span class="pn">起點：逐案相似（已排除同公司洩漏）</span><span class="metrics">前三 <b>48.1%</b>　前五 64.7%</span></div>
+        <p class="do">做法：拿新案去找每位顧問「過去最像的 5 個舊案」，誰的舊案最像就排前面。<strong>關鍵設定：同一家客戶的舊案先拿掉。</strong></p>
+        <p class="so">這個「拿掉同公司舊案」很重要：沒拿掉前帳面有 64 分，但那是作弊——等於用「這顧問以前就服務過這客戶」反推他適合。拿掉後掉到 48 分，這才是誠實起點。後面每條線都是在補這 48 分的不足。</p>
+      </div>
+      <div class="takeaway"><b>這條線學到：</b>48 分這個低起點，有一半是「把作弊拿掉」的結果。它也提醒我們——字面比對（本機 TF-IDF）連前五都只有 65 分，撐不起穩定的前三。</div>
+    </div>
+
+    <!-- 完整池加料 -->
+    <div class="tab-panel" id="t1">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag lex">字面比對</span></div><p>不動候選池（維持完整名單），只在「排序分數」上加料——加整體實力、再加主管習慣——能往前推多少？</p></div>
+      <div class="plan win">
+        <div class="ph"><span class="pn">① 完整池 + 整體實力 40%</span><span class="metrics">前三 <b>52.7%</b>　<span style="color:var(--success)">+4.6</span></span></div>
+        <p class="do">做法：不要只看 5 個最像的舊案，也把「顧問整體能力」納入 40%，避免某人只因一兩個舊案文字很像就被排太前。</p>
+        <p class="so">提升 4.6 分。整體實力補了一些訊號，但只靠調權重，離 70 還很遠。</p>
+      </div>
+      <div class="plan win">
+        <div class="ph"><span class="pn">② 完整池 + 整體實力 80% + 主管習慣</span><span class="metrics">前三 <b>57.0%</b>　<span style="color:var(--success)">+8.9</span></span></div>
+        <p class="do">做法：整體實力提高到 80%，再加「過去主管常派誰」的慣性（只看案子發生前的紀錄）。</p>
+        <p class="so">前三衝到 57 分、前五首度破 70。主管習慣能把更多對的人推進前五，但還進不了前三。</p>
+      </div>
+      <div class="takeaway"><b>這條線學到：</b>「看整體實力」是最有效的單一改良；「主管習慣」有效但邊際效益開始變小。兩者都沒動候選池，所以是<strong>可上線</strong>的乾淨路線。</div>
+    </div>
+
+    <!-- 縮小候選池 -->
+    <div class="tab-panel" id="t2">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag lex">字面比對</span></div><p>如果把候選人從 14 人硬縮到 8 人，前三是不是更容易命中？代價是什麼？</p></div>
+      <div class="plan killed">
+        <div class="ph"><span class="pn">③ 硬切單課</span><span class="metrics">前三可評估 <b>59.3%</b>　全部只 52.1% <span class="gap-flag">⚠</span></span></div>
+        <p class="do">做法：原本一個部門同時看兩個課，這次依產業別硬切到單一課。候選人變少，前三當然更容易中。</p>
+        <p class="so">可評估跳到 59，但「不能評估」的案子從 8 個暴增到 106 個——這些被踢掉的正是案例二那種「主管真正選的人」。誠實口徑只有 52 分。</p>
+      </div>
+      <div class="plan killed">
+        <div class="ph"><span class="pn">④⑤ 硬切 + 整體實力 80%（＋主管習慣）</span><span class="metrics">前三可評估 <b>65.1～65.7%</b>　全部 ~57% <span class="gap-flag">⚠</span></span></div>
+        <p class="do">做法：在縮小的候選池上疊加整體實力與主管習慣。</p>
+        <p class="so">可評估衝到 65，是「純排序」帳面最強。但誠實口徑仍卡在 57，瓶頸就是被硬切踢掉的 106 個案子，再怎麼疊都補不回來。</p>
+      </div>
+      <div class="kill-note">⚠ 這整條線已於 2026-06-09 被明確否決：「下一輪命中率優化不使用硬切單一課別 trial」。它只用來測「縮池的理論上限」，不會上線。</div>
+      <div class="takeaway"><b>這條線學到：</b>縮小候選池是「看起來有效、其實灌水」的典型。可評估分數漂亮，但誠實口徑幾乎沒贏完整池，還賠上 106 個被誤刪的真實選擇。</div>
+    </div>
+
+    <!-- 專長護欄 -->
+    <div class="tab-panel" id="t3">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag lex">字面比對</span></div><p>還記得「顧問因一個剛好很像的舊案就被排第一」的毛病嗎？這條線想用「專長護欄」修掉它。</p></div>
+      <div class="card soft" style="margin-bottom:18px;">
+        <p style="margin:0;font-size:14px;"><strong>真實案例（匿名）：</strong>某客戶要找「業務開發＋廠務管理主管」。系統把<strong>顧問甲</strong>排第一，只因她做過<strong>一個</strong>很像的廠長案、光這案就佔了她相似分數的 <strong>53%</strong>；但她整體橫跨財務、人資、行銷多領域，不該因一個案子就排第一。專長護欄就是為了抓出這種「孤立高分」。</p>
+      </div>
+      <div class="plan">
+        <div class="ph"><span class="pn">⑥ 完整池 + 專長護欄（＋最佳權重）</span><span class="metrics">前三 <b>49.3 → 54.3%</b></span></div>
+        <p class="do">做法：若某顧問的高分來自少數孤立舊案、整體能力卻撐不住，就把分數折減；再與整體實力混合。</p>
+        <p class="so">單獨用幾乎沒提升（+1.2）；配上整體實力後到 54 分。<strong>護欄擅長「減少錯誤的高分」，而不是把對的人往上推。</strong></p>
+      </div>
+      <div class="plan killed">
+        <div class="ph"><span class="pn">⑦ 硬切 + 專長護欄（＋最佳權重）</span><span class="metrics">前三可評估 <b>60.3 → 65.0%</b> <span class="gap-flag">⚠</span></span></div>
+        <p class="do">做法：把護欄搬到硬切候選池上測試（同屬已否決的硬切線）。</p>
+        <p class="so">值得注意：小池＋高整體實力時，加了護欄（65.0）反而比沒加（方案④的 65.1）略低。<strong>訊號已經夠豐富時，護欄變成多餘的雜訊。</strong></p>
+      </div>
+      <div class="takeaway"><b>這條線學到：</b>專長護欄的正確定位不是「主排序分數」，而是「風險標記」——標出可疑的孤立高分案，提醒人或後續模型留意，而不是拿來決定名次。</div>
+    </div>
+
+    <!-- 語意引擎 -->
+    <div class="tab-panel" id="t4">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag dense">語意引擎</span></div><p>前面用的是本機陽春的字面比對。換上正式的 OpenAI 語意向量，能不能突破前三的天花板？</p></div>
+      <div class="plan">
+        <div class="ph"><span class="pn">⑧ 語意 + 完整池 + 專長護欄</span><span class="metrics">前三 <b>53.9%</b>　前五 72.5%</span></div>
+        <p class="do">做法：把字面比對引擎換成懂語意的 OpenAI 向量，其餘照舊。</p>
+        <p class="so">關鍵觀察：前五從 66 跳到 72.5，但前三幾乎沒動。<strong>語意引擎很會「把對的人推進前五」，卻推不進前三。</strong></p>
+      </div>
+      <div class="plan win">
+        <div class="ph"><span class="pn">⑨ 語意 + 完整池 + 護欄 + 主管習慣</span><span class="metrics">前三 <b>58.4%</b>　全部 57.9%（誠實）</span></div>
+        <p class="do">做法：在語意引擎的完整池上補上主管習慣。</p>
+        <p class="so">前三到 58 分，而且因為沒縮小候選池，<strong>可評估與全部案子幾乎一致（58.4 vs 57.9）——這是所有方案裡最誠實、最可上線的高分。</strong></p>
+      </div>
+      <div class="plan killed">
+        <div class="ph"><span class="pn">⑩⑪ 語意 + 硬切（各種組合）</span><span class="metrics">前三可評估 <b>65.7 → 66.6%</b>　全部 ~58% <span class="gap-flag">⚠</span></span></div>
+        <p class="do">做法：把語意引擎搬到硬切候選池，疊加護欄、主管習慣。方案⑪是帳面最高的 66.6 分。</p>
+        <p class="so">前五衝到 86，非常高；但前三「全部案子」口徑還是只有 58——又是縮池灌水。<strong>方案⑪帳面 66.6 與誠實 58.4 之間的 8.2 分落差，全是被排除的案子；而且這條硬切線已被否決。</strong></p>
+      </div>
+      <div class="takeaway"><b>這條線學到：</b>語意引擎證明「召回」（把對的人放進前五）已不錯，前五最高到 86。但前三上不去，代表瓶頸是「排序」與「縮池代價」，換更強的比對引擎已邊際遞減。</div>
+    </div>
+
+    <!-- 整合版 -->
+    <div class="tab-panel" id="t5">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag dense">語意引擎</span></div><p>把前面學到的「可上線」招式整合起來——語意引擎 + 完整候選池 + 主管習慣（設上限版）+ 在前五內用職務類別重排——這個最新版能不能再往前？</p></div>
+      <div class="card soft" style="margin-bottom:18px;">
+        <p style="margin:0;font-size:14px;"><strong>為什麼主管習慣要「設上限」（匿名案例）：</strong>同一個案子，沒加主管習慣時系統正確把<strong>顧問乙</strong>排第 1；但加了「未設上限」的主管習慣後，顧問乙被擠到第 <strong>6 名</strong>（被主管過去偏好的人蓋過）。改用「設上限版」後，顧問乙拉回第 <strong>2 名</strong>。這證明主管習慣有用，但不能讓它無限放大、蓋過真正最匹配的人。</p>
+      </div>
+      <div class="plan win">
+        <div class="ph"><span class="pn">⑫ 語意 + 完整池 + 設上限主管習慣 + 職務重排</span><span class="metrics">前三 <b>58.4%</b>　只 +0.5（職務重排部分）</span></div>
+        <p class="do">做法：先用語意引擎和設上限的主管習慣排好，再用職務家族分類（業務／財務／製造…）對前五名做一次重排。這是 2026-06-10 把兩段優化接起來的最新整合版。</p>
+        <p class="so">職務重排只多 0.5 分。原因是目前職務分類是用關鍵字粗略判斷的，訊號太粗，分不出前五名之間的細緻差異。<strong>但它是目前最完整、且完全可上線的版本</strong>，前三 58.4%、誠實口徑 57.9%。</p>
+      </div>
+      <div class="takeaway"><b>這條線學到：</b>「在前五內重排」本身的提升空間有限——因為三分之一的案子，對的人根本沒進前五，重排前五對它們毫無幫助。這正是下一節「天花板」要講的事。</div>
+    </div>
+
+    <!-- 診斷 -->
+    <div class="tab-panel" id="t6">
+      <div class="line-intro"><div class="q">這條線在問<span class="eng-tag lex">字面比對</span></div><p>這兩個不是可上線方案，而是用來「探底」與「探路」的：字面比對的極限在哪？還有哪條路沒走完？</p></div>
+      <div class="plan">
+        <div class="ph"><span class="pn">診斷：偷看答案 oracle（不可上線）</span><span class="metrics">前三 <b>63.3%</b></span></div>
+        <p class="do">做法：壓力測試——假設事先知道主管最後選哪一課，只在那課裡排序。因為用了答案欄位，只能判斷瓶頸、不能上線。<strong>注意：這個診斷用的是字面比對引擎。</strong></p>
+        <p class="so">關鍵診斷：即使候選範圍完美無缺，<strong>字面比對</strong>的前三也只有 63 分。證明剩下的缺口不是「候選池圈得對不對」，而是「字面比對本身的能力上限」。（語意引擎在同樣的偷看條件下能到幾分，這個對照<strong>還沒測過</strong>。）</p>
+      </div>
+      <div class="plan">
+        <div class="ph"><span class="pn">未完成：換另一種字面算法（BM25）</span><span class="metrics">超時 · 未完成</span></div>
+        <p class="do">做法：想換一種對「長短文字、關鍵詞重複」處理更合理的字面相似度算法。但這輪全量即時計算太慢，超過時間上限。</p>
+        <p class="so">方向仍合理，但必須先把資料預先建好索引、不能即時硬算。這是下一輪可接續的工程題，不能用超時結果判斷好壞。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 天花板 -->
+  <section>
+    <span class="sec-num">05</span>
+    <h2>把所有測試串起來：我們撞到兩面天花板</h2>
+    <p>讀完 18 個測試，最重要的不是「哪個分數最高」，而是它們共同指向的兩個結構性上限：</p>
+    <div class="ceiling">
+      <div class="ceiling-card">
+        <div class="cap">63<small style="font-size:18px;">分</small></div>
+        <h4>天花板一：字面比對的能力上限</h4>
+        <p>「偷看答案」的診斷證明——就算候選範圍完美，<strong>字面比對（本機 TF-IDF）</strong>的前三也只到 63 分。<strong>注意：這是字面引擎的天花板；語意引擎在同條件下能到幾分還沒測，是個待驗證的問題。</strong></p>
+      </div>
+      <div class="ceiling-card">
+        <div class="cap">65<small style="font-size:18px;">分</small></div>
+        <h4>天花板二：光排前五，最多到這</h4>
+        <p>目前「對的人有進前五」的案子只佔約 65%。就算把每個案子的前五排到完美，前三天花板就是 65 分——因為剩下三分之一的案子，對的人連前五都沒進。</p>
+      </div>
+    </div>
+    <p class="punch">所以「在前五內重排」的方案（職務重排只 +0.5）注定有限——真正要做的，是把更多對的人先送進前五。</p>
+  </section>
+
+  <!-- 06 下一步 -->
+  <section>
+    <span class="sec-num">06</span>
+    <h2>接下來該做什麼</h2>
+    <p>下一階段的重點會明顯不同於過去——過去都在調「排序」，接下來要轉向「召回」與「補資料」：</p>
+    <div class="card">
+      <div class="step">
+        <div class="idx">1</div>
+        <div class="body"><h4>先把選項出對（主線）</h4><p>讓「對的顧問」更容易進到前五：把案子的需求描述寫得更精準、補齊資料太單薄的顧問檔案、改善召回方式。這一步不做，70 分到不了。</p></div>
+      </div>
+      <div class="step secondary">
+        <div class="idx">2</div>
+        <div class="body"><h4>補上「文字看不到」的營運資料</h4><p>原始紀錄明確指出：58 分附近的瓶頸<strong>很可能不是比對引擎本身</strong>，而是缺營運事實——顧問現在忙不忙、手上案子滿不滿、最近接案頻率、主管的派案治理偏好。主管派案本來就會看「誰現在有空」，系統卻看不到。</p></div>
+      </div>
+      <div class="step secondary">
+        <div class="idx">3</div>
+        <div class="body"><h4>把「服務過同一個客戶」單獨拉出來</h4><p>顧問是否服務過這客戶很有用，但它和「專業匹配」是兩回事（這也正是 baseline 要排除同公司洩漏的原因）。應該獨立標示、當成給主管的提醒項，而不是混進相似度分數。</p></div>
+      </div>
+      <div class="step last">
+        <div class="idx">4</div>
+        <div class="body"><h4>最後才精修「怎麼排」</h4><p>等前五命中率拉上來，再回頭把前三排好。順序不能反：前五只有 75% 準時練排序天花板是 65 分；前五拉到 85%，同樣的排序就能換到 70 分以上。職務分類也要從「關鍵字版」升級成「可審核版」。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 結語 -->
+  <section>
+    <div class="final">
+      <div class="q-mark">&ldquo;</div>
+      <p>我們試了 18 種做法，誠實的結論是：可上線的真實最佳約 <strong>58 分</strong>（語意引擎 + 完整候選池）；帳面 66 分是靠已被否決的硬切候選池換來的、不算數。靠調整<strong>排序</strong>，天花板大約在 <strong>65 分</strong>。要破 70，真正要解的是<strong>「讓對的顧問先進入候選名單」</strong>，以及補上<strong>「顧問現在能不能接案」</strong>這類營運資料——而不是再換更強的比對引擎。下一階段，重點會從「排序」轉向「召回」。</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>本文為測試紀錄白話版，所有數據與「可上線／已否決」判定均回溯自 <code>docs/11_experiment_log.md</code>、<code>top3_optimization_experiments.json</code> 與各實驗 manifest（2026-06-08～06-10）；為保護當事人，顧問與客戶名稱均已匿名。</p>
+    <p>引擎標示：方案 1～7、oracle 診斷、BM25 使用本機 <code>local_tfidf_char_ngram</code> 字面比對；方案 8～12 使用 OpenAI <code>text-embedding-3-small</code>（512 維）語意向量。</p>
+    <p>更細的工程口徑（逐列指標、公式版本、特徵工程任務）將另出一份工程版文件。</p>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.tab-button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-button').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
