@@ -250,7 +250,7 @@
   }
   .arch-io-groups {
     display: grid;
-    grid-template-columns: 3fr 1fr;
+    grid-template-columns: 2fr 1fr 2fr 1fr;
     gap: 6px;
     margin-bottom: 0;
   }
@@ -267,6 +267,14 @@
   .arch-io-group.input-group {
     color: var(--primary);
     border-color: rgba(30,58,95,0.35);
+  }
+  .arch-io-group.calc-group {
+    color: var(--success);
+    border-color: rgba(45,106,79,0.4);
+  }
+  .arch-io-group.rerank-group {
+    color: #9a6b40;
+    border-color: rgba(154,107,64,0.42);
   }
   .arch-io-group.output-group {
     color: #b08043;
@@ -358,6 +366,16 @@
     flex-shrink: 0;
     width: 12px;
   }
+  .arch-io-callout {
+    background: #fff8ec;
+    border: 1px dashed var(--accent-light);
+    border-radius: 8px;
+    color: var(--primary);
+    font-size: 14px;
+    line-height: 1.7;
+    margin: -8px 0 28px;
+    padding: 14px 18px;
+  }
 
   /* Code Block */
   pre {
@@ -443,6 +461,64 @@
     margin-bottom: 4px;
   }
   .rule .rule-title { font-size: 17px; font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+  .rule.rule-collapsible {
+    padding: 0;
+  }
+  .rule-summary {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1fr 28px;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+  }
+  .rule-summary::-webkit-details-marker {
+    display: none;
+  }
+  .rule-summary:hover .rule-toggle-icon,
+  .rule-summary:focus-visible .rule-toggle-icon {
+    border-color: rgba(31, 59, 92, 0.48);
+    background: #efe7dc;
+  }
+  .rule-summary:focus-visible {
+    outline: 2px solid rgba(201, 122, 62, 0.42);
+    outline-offset: 3px;
+  }
+  .rule-summary .rule-title {
+    margin-bottom: 0;
+  }
+  .rule-toggle-icon {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(31, 59, 92, 0.22);
+    border-radius: 50%;
+    background: #f7f4ef;
+    position: relative;
+  }
+  .rule-toggle-icon::before,
+  .rule-toggle-icon::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 13px;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 999px;
+  }
+  .rule-toggle-icon::after {
+    transform: rotate(90deg);
+  }
+  .rule[open] .rule-toggle-icon::after {
+    transform: rotate(0deg);
+  }
+  .rule-content {
+    padding: 0 24px 18px;
+  }
+  .rule-content > :first-child {
+    margin-top: 0;
+  }
 
   /* Before / After Compare */
   .io-grid {
@@ -516,6 +592,48 @@
   .flow-body { flex: 1; }
   .flow-title { font-weight: 600; color: var(--primary); margin-bottom: 4px; }
   .flow-desc { font-size: 14px; color: var(--text-sub); }
+
+  .consultant-source-flow {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    gap: 14px;
+    padding: 18px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .consultant-source-flow .flow-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+  .consultant-source-flow .flow-step:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    z-index: 1;
+    transform: translateY(-50%);
+    color: var(--border-strong);
+    font-weight: 700;
+  }
+  .consultant-source-flow .flow-step:last-child { border-bottom: 1px solid var(--border); }
+  .consultant-source-flow .flow-body { width: 100%; }
+  .consultant-source-flow .flow-title {
+    margin-bottom: 4px;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .consultant-source-flow .flow-desc {
+    font-size: 12.5px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
 
   /* Principle */
   .principle {
@@ -908,6 +1026,52 @@
     color: var(--accent);
     border-color: var(--accent-light);
   }
+  .pipeline-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: -4px 0 16px;
+  }
+  .pipeline-tab {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text-sub);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    padding: 8px 13px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .pipeline-tab:hover {
+    border-color: var(--accent-light);
+    color: var(--accent);
+  }
+  .pipeline-tab[aria-selected="true"] {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(15, 53, 92, 0.16);
+  }
+  .pipeline-tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .pipeline-tab-panel[hidden] {
+    display: none;
+  }
+  .pipeline-tab-modal {
+    background: var(--bg-highlight);
+    border-color: var(--accent-light);
+    color: var(--accent);
+  }
+  .pipeline-tab-modal:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   .pv-list {
     list-style: none;
     padding: 0;
@@ -961,6 +1125,18 @@
     display: flex;
     align-items: stretch;
     gap: 4px;
+  }
+  .pipeline-flow.mapreduce-flow {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+  .pipeline-flow.mapreduce-flow .pf-step {
+    flex: 0 0 112px;
+  }
+  .pipeline-flow.mapreduce-flow .pf-arrow {
+    flex: 0 0 12px;
   }
   .pf-step {
     flex: 1;
@@ -1052,6 +1228,21 @@
     color: var(--accent);
     margin-bottom: 4px;
   }
+  .pf-method-tag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(201, 122, 62, 0.12);
+    border: 1px solid rgba(201, 122, 62, 0.28);
+    color: var(--accent);
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    vertical-align: 1px;
+    white-space: nowrap;
+  }
   .pf-pkg-desc {
     font-size: 12.5px;
     color: var(--text-sub);
@@ -1107,10 +1298,24 @@
     color: #fff;
     font-weight: 700;
   }
+  .pf-corner.method {
+    top: auto;
+    right: auto;
+    bottom: -1px;
+    left: -1px;
+    border-radius: 0 6px 0 8px;
+  }
   .pf-step.new {
     background: linear-gradient(135deg, #fdf6e3 0%, #fbf2e6 100%);
     border-color: var(--accent);
     box-shadow: 0 2px 6px rgba(201, 122, 62, 0.12);
+  }
+  .pf-step.soft-compare {
+    background: rgba(253, 246, 227, 0.45);
+    border-color: rgba(232, 168, 107, 0.5);
+  }
+  .pf-step.soft-compare .pf-num {
+    background: rgba(201, 122, 62, 0.42);
   }
   .pf-num {
     width: 24px; height: 24px;
@@ -1146,6 +1351,601 @@
     flex-shrink: 0;
     width: 10px;
   }
+
+  /* GAR Concept Diagram — trigger + modal */
+  .gar-concept-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 4px 0 16px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #fdf6e3 0%, #fbf2e6 100%);
+    border: 1.5px dashed var(--accent-light);
+    border-radius: 10px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .gar-concept-trigger:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(201, 122, 62, 0.18);
+  }
+  .gar-concept-trigger-icon {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .gar-concept-trigger-text { flex: 1; line-height: 1.4; }
+  .gar-concept-trigger-text small {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-sub);
+    margin-top: 2px;
+  }
+  .gar-concept-trigger-hint {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .gar-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+  }
+  .gar-modal[hidden] { display: none; }
+  .gar-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(30, 58, 95, 0.55);
+    backdrop-filter: blur(2px);
+  }
+  .gar-modal-dialog {
+    position: relative;
+    width: min(96vw, 1280px);
+    max-height: calc(100vh - 56px);
+    background: var(--bg-card);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+    overflow: auto;
+  }
+  .gar-modal-dialog-image {
+    width: min(96vw, 1600px);
+    padding: 18px;
+    background: var(--bg-card);
+  }
+  .gar-modal-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 92px);
+    object-fit: contain;
+    border-radius: 6px;
+  }
+  .gar-modal-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    z-index: 2;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-sub);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .gar-modal-close:hover { color: var(--accent); border-color: var(--accent-light); }
+  body.gar-modal-open { overflow: hidden; }
+
+  /* Embedding modal: 圖片 + 聚合實驗報告 */
+  .embedding-modal-dialog {
+    width: min(98vw, 1700px);
+    padding: 10px 10px 18px;
+  }
+  .embedding-modal-image {
+    max-height: none;
+    width: 100%;
+    height: auto;
+  }
+  .embedding-modal-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-sub);
+    text-transform: uppercase;
+  }
+  .embedding-modal-divider::before,
+  .embedding-modal-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .embedding-modal-report {
+    display: block;
+    width: 100%;
+    height: 1200px; /* fallback; JS auto-fits to content */
+    max-height: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #f5f6fa;
+  }
+
+  /* Version modal: 版本數據比較表 */
+  .version-modal-dialog {
+    width: min(96vw, 1080px);
+    padding: 26px 30px 26px;
+  }
+  .version-modal-header { margin-bottom: 18px; }
+  .version-modal-title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+  }
+  .version-modal-sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-sub);
+    line-height: 1.6;
+  }
+  .version-modal-table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .version-modal-table {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+    background: #fff;
+    overflow: visible;
+  }
+  .version-modal-table th {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 12px 14px;
+    text-align: left;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .version-modal-table td {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+    background: #fff;
+    color: var(--text);
+  }
+  .version-modal-table tbody tr:first-child td { border-top: 0; }
+  .version-modal-table .vmt-num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .version-modal-table .vmt-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    margin-right: 6px;
+    color: #fff;
+  }
+  .vmt-tag-v1 { background: #8a96a5; }
+  .vmt-tag-v2 { background: var(--accent); } /* 最新版：橘色強調 */
+  .vmt-row-best td {
+    background: linear-gradient(180deg, #fdf6e8 0%, #faedd4 100%);
+    color: var(--primary);
+  }
+  .vmt-note { line-height: 1.5; }
+  .vmt-note-line {
+    display: block;
+    font-size: 13px;
+    color: var(--text-sub);
+  }
+  .vmt-note-line-em {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .version-modal-foot {
+    margin: 14px 2px 0;
+    font-size: 12px;
+    color: var(--text-sub);
+    line-height: 1.6;
+  }
+
+  /* GAR Concept Diagram */
+  .gar-concept {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 28px 26px;
+    margin: 0;
+  }
+  .gar-modal .gar-concept { border: none; padding: 28px 36px 32px; }
+  .gar-concept-head { margin-bottom: 18px; }
+  .gar-concept-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 0 0 6px;
+    line-height: 1.3;
+  }
+  .gar-concept-title .em { color: var(--primary-light); }
+  .gar-concept-sub {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    margin: 0;
+    line-height: 1.5;
+  }
+  .gar-concept-main {
+    display: grid;
+    grid-template-columns: 1.1fr 78px 1.5fr 90px 1.3fr;
+    grid-template-rows: auto auto auto;
+    gap: 12px 6px;
+    align-items: stretch;
+  }
+  .gar-box {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .gar-box-head {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-sub);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gar-box-head .gar-box-icon { font-size: 15px; }
+  /* 原始資料 */
+  .gar-raw { grid-column: 1; grid-row: 1; background: #f8f6f0; }
+  .gar-raw-meter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+  }
+  .gar-raw-bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, var(--border-strong) 0 60%, transparent 60% 100%);
+    border: 1px dashed var(--border-strong);
+    position: relative;
+  }
+  .gar-raw-bar::after {
+    content: "";
+    position: absolute;
+    left: 60%; top: -1px; bottom: -1px; right: -1px;
+    border: 1px dashed var(--primary-light);
+    border-radius: 0 4px 4px 0;
+    background: transparent;
+  }
+  .gar-raw-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-sub);
+    margin-top: 6px;
+  }
+  .gar-raw-labels .em { color: var(--primary-light); font-weight: 700; }
+  /* 委託案件 GAR 文本包 */
+  .gar-query { grid-column: 3; grid-row: 1; }
+  .gar-query .gar-box-head {
+    color: #fff;
+    background: var(--primary);
+    margin: -12px -14px 12px;
+    padding: 10px 14px;
+    border-radius: 6px 6px 0 0;
+    font-size: 14px;
+    justify-content: center;
+  }
+  .gar-query-precision {
+    background: rgba(46, 90, 136, 0.08);
+    color: var(--primary);
+    border: 1px solid rgba(46, 90, 136, 0.2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .gar-query-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .gar-query-list {
+    list-style: disc;
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    flex: 1;
+  }
+  .gar-query-list li { margin: 0; }
+  .gar-query-tag {
+    align-self: stretch;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    background: rgba(46, 90, 136, 0.08);
+    color: var(--primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    padding: 6px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* 顧問能力包 */
+  .gar-consult { grid-column: 5; grid-row: 1 / span 3; }
+  .gar-consult .gar-box-head {
+    color: #fff;
+    background: var(--accent);
+    margin: -12px -14px 12px;
+    padding: 10px 14px;
+    border-radius: 6px 6px 0 0;
+    font-size: 14px;
+    justify-content: center;
+  }
+  .gar-consult-body {
+    flex: 1;
+    background: rgba(201, 122, 62, 0.06);
+    border: 1px dashed var(--accent-light);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .gar-consult-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .gar-consult-lines span {
+    display: block;
+    height: 6px;
+    background: rgba(201, 122, 62, 0.18);
+    border-radius: 3px;
+  }
+  .gar-consult-lines span:nth-child(2) { width: 80%; }
+  .gar-consult-lines span:nth-child(3) { width: 92%; }
+  .gar-consult-lines span:nth-child(4) { width: 70%; }
+  .gar-consult-lines span:nth-child(5) { width: 88%; }
+  .gar-consult-label {
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.5;
+  }
+  .gar-consult-foot {
+    font-size: 11.5px;
+    color: var(--text-mute);
+    text-align: center;
+    line-height: 1.5;
+  }
+  /* arrows */
+  .gar-arrow-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+  }
+  .gar-arrow-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 4px rgba(30, 58, 95, 0.18);
+  }
+  .gar-arrow-num.accent { background: var(--accent); box-shadow: 0 2px 4px rgba(201, 122, 62, 0.22); }
+  .gar-arrow-line {
+    width: 100%;
+    height: 0;
+    border-top: 2px solid var(--primary);
+    position: relative;
+  }
+  .gar-arrow-line::after {
+    content: "";
+    position: absolute;
+    right: -1px; top: -5px;
+    border-left: 7px solid var(--primary);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .gar-arrow-line.bidi::before {
+    content: "";
+    position: absolute;
+    left: -1px; top: -5px;
+    border-right: 7px solid var(--primary);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .gar-arrow-line.accent { border-top-color: var(--accent); }
+  .gar-arrow-line.accent::after { border-left-color: var(--accent); }
+  .gar-arrow-label {
+    font-size: 11.5px;
+    color: var(--primary);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .gar-arrow-label.accent { color: var(--accent); }
+  .gar-arr-1 { grid-column: 2; grid-row: 1; }
+  .gar-arr-emb { grid-column: 4; grid-row: 1; }
+  /* bullets row */
+  .gar-bullets {
+    grid-column: 1 / span 4;
+    grid-row: 2;
+    padding: 4px 14px 0;
+  }
+  .gar-bullets ul {
+    list-style: disc;
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12.5px;
+    color: var(--text-sub);
+    line-height: 1.7;
+  }
+  .gar-bullets li { margin-bottom: 2px; }
+  .gar-bullets strong { color: var(--primary); font-weight: 700; }
+  /* bottom row */
+  .gar-history { grid-column: 1; grid-row: 3; }
+  .gar-history .gar-box-head { color: var(--text-sub); }
+  .gar-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .gar-history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: #fafafa;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+  .gar-history-item .gar-history-bar {
+    flex: 1;
+    height: 5px;
+    background: linear-gradient(to right, var(--border-strong) 0 55%, transparent 55%);
+    border-radius: 3px;
+  }
+  .gar-arr-2 { grid-column: 2; grid-row: 3; }
+  .gar-arr-2 .gar-arrow-label .ratio { color: var(--accent); }
+  .gar-longq { grid-column: 3; grid-row: 3; background: rgba(201, 122, 62, 0.04); border-color: var(--accent-light); position: relative; }
+  .gar-longq .gar-box-head { color: var(--accent); }
+  .gar-longq-text {
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .gar-longq-text .em { color: var(--accent); font-weight: 700; }
+  .gar-longq-foot {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  /* M/R arrow back up from longq to consult */
+  .gar-mr {
+    grid-column: 4;
+    grid-row: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+    position: relative;
+    padding: 6px 2px;
+  }
+  .gar-mr-line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to top, var(--accent) 60%, transparent 100%);
+    position: relative;
+    min-height: 60px;
+  }
+  .gar-mr-line::before {
+    content: "";
+    position: absolute;
+    top: -1px; left: -5px;
+    border-bottom: 9px solid var(--accent);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+  }
+  .gar-mr-label {
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  /* 概念重點 */
+  .gar-keypoints {
+    margin-top: 18px;
+    background: var(--bg-highlight);
+    border: 1px dashed var(--accent-light);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .gar-keypoints-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+  .gar-keypoints-list {
+    list-style: disc;
+    margin: 0;
+    padding-left: 22px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.75;
+  }
+  .gar-keypoints-list li { margin-bottom: 2px; }
 
   /* Diff Summary */
   .diff-grid {
@@ -1305,6 +2105,13 @@
     gap: 6px;
     flex-shrink: 0;
   }
+  .prompt-tip-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
   .prompt-tip {
     border: 1px solid rgba(201, 122, 62, 0.44);
     background: #fff8ef;
@@ -1322,6 +2129,17 @@
     background: #f6e4cc;
     border-color: var(--accent);
     outline: none;
+  }
+  .se-section-label.has-prompt-tip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .prompt-tip-inline {
+    padding: 2px 9px;
+    font-size: 10px;
+    letter-spacing: 0;
   }
   .prompt-tip-modal[hidden] { display: none; }
   .prompt-tip-modal {
@@ -1909,7 +2727,7 @@
     <div class="section-label">前言</div>
     <ul>
       <li><a href="#why" class=""><span class="nav-num">01</span><span class="nav-text">為什麼要從 ML 轉</span></a></li>
-      <li><a href="#pipeline" class=""><span class="nav-num">02</span><span class="nav-text">框架流程對比</span></a></li>
+      <li><a href="#pipeline" class="active"><span class="nav-num">02</span><span class="nav-text">框架流程對比</span></a></li>
     </ul>
     <div class="section-label">第一版設計</div>
     <ul>
@@ -1941,7 +2759,7 @@
   <div class="why-hero">
     <div class="small-label" spellcheck="false">資料條件比較</div>
     <h2 spellcheck="false">為什麼要從 ML 轉到 LLM Reranking</h2>
-    <p class="sublead" spellcheck="false">獵才分案不是典型的大規模推薦——資料量小、決策因子複雜，許多判斷不是數字問題，而是<em>語意問題</em>。這種場景特性，正好是傳統 ML 較弱、LLM 較強的交界；分案要的不是優化全局指標的排序器，而是能讀懂案件本質、做出像主管的取捨。</p>
+    <p class="sublead" spellcheck="false"><font color="#c97a3e">獵才分案不是典型的大規模推薦——資料量小、決策因子複雜</font>，許多判斷不是數字問題，而是<em>語意問題</em>。這種場景特性，正好是傳統 ML 較弱、LLM 較強的交界；分案要的不是優化全局指標的排序器，而是能讀懂案件本質、做出像主管的取捨。</p>
   </div>
 
   <div class="pros-cons">
@@ -1960,11 +2778,11 @@
     <!-- 右：LLM 的優勢 -->
     <div class="pc-card pros">
       <div class="pc-label" spellcheck="false">─ LLM Reranking 的優勢</div>
-      <h3 class="pc-title" spellcheck="false">資料量小、語意重時，LLM 比 ML 更像主管</h3>
+      <h3 class="pc-title" spellcheck="false"><font color="#c97a3e">資料量小、語意重</font>時，LLM 比 ML 更像主管</h3>
       <ul>
-        <li spellcheck="false"><strong>能吸收文字脈絡：</strong>職務描述、顧問經驗摘要、決策規則、案件難點，都能直接納入判斷，不需先轉成特徵。</li>
-        <li spellcheck="false"><strong>少樣本下的語意比較：</strong>在缺乏訓練資料時，仍能做出接近資深主管的取捨，因為它依賴的是語意理解，不是統計擬合。</li>
-        <li spellcheck="false"><strong>處理難以特徵化的判斷：</strong>「產業 ≠ 本質」「研發主管 ≠ 業務主管」「近期接觸」等隱性條件，可以用文字明確表達並執行。</li>
+        <li spellcheck="false"><strong><font color="#c97a3e">能吸收文字脈絡</font>：</strong>職務描述、顧問經驗摘要、決策規則、案件難點，都能直接納入判斷，不需先轉成特徵。</li>
+        <li spellcheck="false"><strong>少樣本下的語意比較：</strong>在缺乏訓練資料時，仍能做出接近資深主管的取捨，因為它依賴的是<font color="#c97a3e"><b>語意理解，不是統計擬合</b></font>。</li>
+        <li spellcheck="false"><strong><font color="#c97a3e">處理難以特徵化的判斷</font>：</strong>「產業 ≠ 本質」「研發主管 ≠ 業務主管」「近期接觸」等隱性條件，可以用文字明確表達並執行。</li>
         <li spellcheck="false"><strong>不取代而是分工：</strong>保留候選池與硬性資格邊界，Baseline Score 從傳統 ML 權重公式轉為 Embedding 語意相似度計算，再由 LLM 在既有候選集合內根據證據重排。</li>
       </ul>
     </div>
@@ -1980,7 +2798,7 @@
   <div class="why-hero">
     <div class="small-label" spellcheck="false">框架對比 · BEFORE / AFTER</div>
     <h2 spellcheck="false">兩者框架流程對比</h2>
-    <p class="sublead" spellcheck="false">上下對照可一眼看出 LLM Reranking 在哪幾個環節「接手」——前 4 步驟保留原本管線不變，差異發生在第 5～7 步的<em>新增節點</em>，最後仍由主管判斷是否採納。</p>
+    <p class="sublead" spellcheck="false">部分步驟保留原本管線不變，差異發生在第<font color="#c97a3e"><b>2、4、6</b></font> 步的<em>節點</em>。</p>
   </div>
 
   <div class="pipeline-grid">
@@ -1988,30 +2806,37 @@
     <!-- 上：傳統機器學習排序流程 -->
     <div class="pipeline-wrap before">
       <div class="ph-row">
-        <span class="ph-name">傳統機器學習排序流程</span>
-        <span class="ph-tag">ML Baseline</span>
+        <span class="ph-name" spellcheck="false">傳統機器學習排序流程</span>
+        <span class="ph-tag" spellcheck="false">ML Baseline</span>
       </div>
       <div class="pipeline-flow">
         <div class="pf-step"><span class="pf-num">1</span><span class="pf-text" spellcheck="false">案件進件JD</span></div>
         <span class="pf-arrow">→</span>
-        <div class="pf-step"><span class="pf-num">2</span><span class="pf-text" spellcheck="false">案件需求結構化<br><font color="#555555">[案件資料-無語意]</font></span></div>
+        <div class="pf-step soft-compare"><span class="pf-num">2</span><span class="pf-text" spellcheck="false">案件需求結構化<br><font color="#555555">[案件資料-無語意]</font></span></div>
         <span class="pf-arrow">→</span>
         <div class="pf-step"><span class="pf-num">3</span><span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">候選池／水流／</span><br style="letter-spacing: 0.16px;"><span style="letter-spacing: 0.16px;">分派資格規則</span></span></div>
         <span class="pf-arrow">→</span>
-        <div class="pf-step"><span class="pf-num">4</span><span class="pf-text" spellcheck="false">P1~P3硬規則+P4<br>ML socre產生初排</span></div>
+        <div class="pf-step soft-compare"><span class="pf-num">4</span><span class="pf-text" spellcheck="false">P1~P3硬規則+P4<br>ML socre產生初排</span></div>
         <span class="pf-arrow">→</span>
-        <div class="pf-step"><span class="pf-num">5</span><span class="pf-text" spellcheck="false">輸出 Top N<br>顧問清單與分數</span></div>
+        <div class="pf-step"><span class="pf-num">5</span><span class="pf-text" spellcheck="false">輸出 Top N<br>顧問清單與理由</span></div>
         <span class="pf-arrow">→</span>
         <div class="pf-step"><span class="pf-num">6</span><span class="pf-text" spellcheck="false">完成推薦</span></div>
       </div>
     </div>
 
     <!-- 下：加入 LLM Reranking 後 -->
-    <div class="pipeline-wrap after">
+    <div class="pipeline-wrap after" data-pipeline-tabs="">
       <div class="ph-row">
-        <span class="ph-name">加入 LLM Reranking 後</span>
-        <span class="ph-tag accent">差異流程</span>
+        <span class="ph-name" spellcheck="false">加入 Embedding &amp; LLM Reranking 後</span>
+        <span class="ph-tag accent" spellcheck="false">Embedding+llm reranking</span>
       </div>
+      <div class="pipeline-tabs" role="tablist" aria-label="Embedding 與 LLM Reranking 流程版本">
+        <button type="button" class="pipeline-tab" id="pipeline-tab-current" data-pipeline-tab="current" role="tab" aria-selected="false" aria-controls="pipeline-panel-current" tabindex="-1" onclick="switchPipelineFlow(event, 'current')">目前版本</button>
+        <button type="button" class="pipeline-tab" id="pipeline-tab-gar" data-pipeline-tab="gar" role="tab" aria-selected="true" aria-controls="pipeline-panel-gar" tabindex="0" onclick="switchPipelineFlow(event, 'gar')">調整版：GAR + 語意包</button>
+        <button type="button" class="pipeline-tab pipeline-tab-modal" id="pipeline-tab-embedding" onclick="openEmbeddingConcept()" aria-haspopup="dialog" aria-controls="embedding-modal">Embedding 計算優化 ⤢</button>
+        <button type="button" class="pipeline-tab pipeline-tab-modal" id="pipeline-tab-version" onclick="openVersionConcept()" aria-haspopup="dialog" aria-controls="version-modal">版本數據 ⤢</button>
+      </div>
+      <div class="pipeline-tab-panel" id="pipeline-panel-current" data-pipeline-panel="current" role="tabpanel" aria-labelledby="pipeline-tab-current" hidden="">
       <div class="pipeline-flow">
         <div class="pf-step">
           <span class="pf-num">1</span>
@@ -2020,7 +2845,7 @@
         </div>
         <span class="pf-arrow">→</span>
         <div class="pf-step new">
-          <div class="pf-corner">📄</div>
+          <div class="pf-corner">📄🏢</div>
           <span class="pf-num">2</span>
           <span class="pf-text" spellcheck="false">案件需求<br>語意結構化</span>
           <span class="pf-sub" spellcheck="false">萃取本案核心成功條件、產業／職務／職級特徵等</span>
@@ -2052,7 +2877,7 @@
           <span class="pf-sub" spellcheck="false">依案件本質與成功條件語料重新排序</span>
         </div>
         <span class="pf-arrow">→</span>
-        <div class="pf-step new">
+        <div class="pf-step">
           <span class="pf-num">7</span>
           <span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">輸出Final Top N</span><br style="letter-spacing: 0.16px;">+調整理由</span>
           <span class="pf-sub" spellcheck="false"><br></span>
@@ -2071,22 +2896,22 @@
           <div class="pf-pkg-row">
             <div class="pf-pkg-icon">📄</div>
             <div>
-              <div class="pf-pkg-name" spellcheck="false">[案件資料包]</div>
+              <div class="pf-pkg-name" spellcheck="false">需求端 [案件資料包]</div>
               <div class="pf-pkg-desc" spellcheck="false">結構化本案資訊與核心成功條件，包含產業、職務、職級、客戶經營、限制條件等，供 Embedding 與 LLM 使用。</div>
-            </div>
-          </div>
-          <div class="pf-pkg-row">
-            <div class="pf-pkg-icon">🏢</div>
-            <div>
-              <div class="pf-pkg-name" spellcheck="false">[公司資料包]</div>
-              <div class="pf-pkg-desc" spellcheck="false">整理公司業務本質、產品／服務型態、價值鏈位置與公開資料補充，作為案件需求側語料與相鄰業務判斷來源。</div>
             </div>
           </div>
           <div class="pf-pkg-row">
             <div class="pf-pkg-icon">👤</div>
             <div>
-              <div class="pf-pkg-name" spellcheck="false">[顧問能力包]</div>
+              <div class="pf-pkg-name" spellcheck="false">供給端 [顧問能力包]</div>
               <div class="pf-pkg-desc" spellcheck="false">彙整顧問過往經驗、擅長領域、成交紀錄、負載狀態等，作為顧問向量（Embedding）來源。</div>
+            </div>
+          </div>
+          <div class="pf-pkg-row">
+            <div class="pf-pkg-icon">🏢</div>
+            <div>
+              <div class="pf-pkg-name" spellcheck="false">雙邊 [公司資料包]</div>
+              <div class="pf-pkg-desc" spellcheck="false">整理公司業務本質、產品／服務型態、價值鏈位置與公開資料補充，作為案件需求側語料與相鄰業務判斷來源。</div>
             </div>
           </div>
           <div class="pf-pkg-row">
@@ -2101,11 +2926,11 @@
           <div class="pf-info-title" spellcheck="false">關鍵調整重點</div>
           <div class="pf-key-item">
             <span class="pf-key-num" spellcheck="false">1</span>
-            <span spellcheck="false">在 Embedding（步驟4）前，先建立「案件資料包」、「公司資料包」與「顧問能力包」。</span>
+            <span spellcheck="false"><font color="#c97a3e">在 Embedding（步驟4）前，先建立「案件資料包」、「公司資料包」與「顧問能力包」。</font></span>
           </div>
           <div class="pf-key-item">
             <span class="pf-key-num" spellcheck="false">2</span>
-            <span spellcheck="false">步驟4以案件與公司需求側語料 × 顧問能力包計算相似度，產生初步排序。</span>
+            <span spellcheck="false"><font color="#c97a3e">步驟4以&nbsp;</font><span style="color: rgb(201, 122, 62); letter-spacing: 0.16px;" spellcheck="false">「案件資料包」</span><font color="#c97a3e">&nbsp;×</font><span style="color: rgb(201, 122, 62); letter-spacing: 0.16px;" spellcheck="false">「顧問能力包」</span><font color="#c97a3e">&nbsp;計算相似度，產生初步排序。</font></span>
           </div>
           <div class="pf-key-item">
             <span class="pf-key-num" spellcheck="false">3</span>
@@ -2120,7 +2945,200 @@
 
       <div class="pf-note-bar">
         <span class="pf-note-bar-icon" spellcheck="false">💡</span>
-        <span spellcheck="false">說明：Embedding 階段負責用案件／公司需求側語料與顧問能力包計算 Baseline Score；LLM Reranking 階段負責「判斷誰最符合本案核心成功條件並輸出最終排序」。</span>
+        <span spellcheck="false">Embedding 階段負責用案件／公司需求側語料與顧問能力包計算 Baseline Score；LLM Reranking 階段負責「判斷誰最符合本案核心成功條件並輸出最終排序」。</span>
+      </div>
+      </div>
+      <div class="pipeline-tab-panel" id="pipeline-panel-gar" data-pipeline-panel="gar" role="tabpanel" aria-labelledby="pipeline-tab-gar">
+        <button type="button" class="gar-concept-trigger" onclick="openGarConcept()" aria-haspopup="dialog" aria-controls="gar-modal">
+          <span class="gar-concept-trigger-icon" aria-hidden="true">📐</span>
+          <span class="gar-concept-trigger-text" spellcheck="false">獵才應用 GAR 概念圖<small>點此放大檢視：把模糊問題轉成可搜尋、可比對的語意</small></span>
+          <span class="gar-concept-trigger-hint" spellcheck="false">放大 ⤢</span>
+        </button>
+
+        <div class="gar-modal" id="gar-modal" role="dialog" aria-modal="true" aria-labelledby="gar-modal-title" hidden="">
+          <div class="gar-modal-backdrop" onclick="closeGarConcept()"></div>
+          <div class="gar-modal-dialog gar-modal-dialog-image">
+            <button type="button" class="gar-modal-close" onclick="closeGarConcept()" aria-label="關閉">×</button>
+            <h3 id="gar-modal-title" class="sr-only" style="position:absolute;left:-9999px;" spellcheck="false">獵才應用 GAR 概念圖</h3>
+            <img class="gar-modal-image" src="outputs/GAR.png" alt="獵才應用 GAR 概念圖：把模糊問題轉成可搜尋、可比對的語意。委託案件原始資料經 GAR 擴充為委託案件 GAR 文本包，與顧問能力包透過 Embedding Similarity 比對；歷史案件先各自 GAR 化為單筆 query 文本，再經 Map / Reduce 濃縮成顧問能力包。">
+          </div>
+        </div>
+
+        <div class="gar-modal" id="embedding-modal" role="dialog" aria-modal="true" aria-labelledby="embedding-modal-title" hidden="">
+          <div class="gar-modal-backdrop" onclick="closeEmbeddingConcept()"></div>
+          <div class="gar-modal-dialog gar-modal-dialog-image embedding-modal-dialog">
+            <button type="button" class="gar-modal-close" onclick="closeEmbeddingConcept()" aria-label="關閉">×</button>
+            <h3 id="embedding-modal-title" class="sr-only" style="position:absolute;left:-9999px;" spellcheck="false">Embedding Similarity 計算優化</h3>
+            <img class="gar-modal-image embedding-modal-image" src="參考/Embedding%20similarity%E5%84%AA%E5%8C%96.png" alt="Embedding Similarity 計算優化：不再把顧問所有歷史案件平均，而是抓出最像本案的前 5 筆經驗。舊做法將所有案件全部平均使能力被沖淡；新做法以新案件 GAR 文本對每筆歷史案件算相似度、取 Top5 加權平均得到顧問分數，是最像新案的代表作。">
+            <div class="embedding-modal-divider" aria-hidden="true">
+              <span>實驗數據佐證 ｜ Top-5 聚合方式報告</span>
+            </div>
+            <iframe class="embedding-modal-report" id="embedding-modal-report" data-src="參考/aggregation_report.html" title="向量聚合方式實驗報告" loading="lazy" src="參考/aggregation_report.html"></iframe>
+          </div>
+        </div>
+
+        <div class="gar-modal" id="version-modal" role="dialog" aria-modal="true" aria-labelledby="version-modal-title" hidden="">
+          <div class="gar-modal-backdrop" onclick="closeVersionConcept()"></div>
+          <div class="gar-modal-dialog version-modal-dialog">
+            <button type="button" class="gar-modal-close" onclick="closeVersionConcept()" aria-label="關閉">×</button>
+            <div class="version-modal-header">
+              <h3 id="version-modal-title" class="version-modal-title" spellcheck="false">版本數據 ｜ 模型推薦表現比較</h3>
+              <p class="version-modal-sub" spellcheck="false">兩版模型在測試樣本上的 Top-K 命中率與推薦池大小。v2.0 為導入 GAR + Embedding（含 Embedding Similarity 計算優化）後的結果。</p>
+            </div>
+            <div class="version-modal-table-wrap">
+              <table class="version-modal-table">
+                <thead>
+                  <tr>
+                    <th spellcheck="false">模型計算推薦分數</th>
+                    <th spellcheck="false">測試樣本</th>
+                    <th spellcheck="false">Top1</th>
+                    <th spellcheck="false">Top3</th>
+                    <th spellcheck="false">Top5</th>
+                    <th spellcheck="false">平均推薦池大小</th>
+                    <th spellcheck="false">備註</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td spellcheck="false"><span class="vmt-tag vmt-tag-v1">v1.0</span> 傳統 ML</td>
+                    <td class="vmt-num" spellcheck="false">143</td>
+                    <td class="vmt-num" spellcheck="false">24.10%</td>
+                    <td class="vmt-num" spellcheck="false">50.00%</td>
+                    <td class="vmt-num" spellcheck="false">69.80%</td>
+                    <td spellcheck="false">7（分科）</td>
+                    <td class="vmt-note" spellcheck="false">—</td>
+                  </tr>
+                  <tr class="vmt-row-best">
+                    <td spellcheck="false"><span class="vmt-tag vmt-tag-v2">v2.0</span> GAR + Embedding</td>
+                    <td class="vmt-num" spellcheck="false">858</td>
+                    <td class="vmt-num" spellcheck="false"><strong>45.80%</strong></td>
+                    <td class="vmt-num" spellcheck="false"><strong>64.22%</strong></td>
+                    <td class="vmt-num" spellcheck="false"><strong>75.87%</strong></td>
+                    <td spellcheck="false">13（不分科）</td>
+                    <td class="vmt-note" spellcheck="false">
+                      <span class="vmt-note-line vmt-note-line-em">Embedding Similarity 計算優化</span>
+                      <span class="vmt-note-line">尚未含 reranking</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="version-modal-foot" spellcheck="false">註：v1.0 與 v2.0 的測試條件不完全相同——測試樣本由 143 筆擴增至 858 筆，推薦池由「分科 7 人」改為「不分科 13 人」，難度顯著上升；數字僅供版本演進參考，並非同基準比較。</p>
+          </div>
+        </div>
+
+        <div class="pipeline-flow">
+          <div class="pf-step">
+            <span class="pf-num">1</span>
+            <span class="pf-text" spellcheck="false">案件進件 JD</span>
+            <span class="pf-sub" spellcheck="false">取得職缺資訊、公司資料與基本限制條件</span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step new">
+            <div class="pf-corner">📄🏢</div>
+            <div class="pf-corner method">GAR</div>
+            <span class="pf-num">2</span>
+            <span class="pf-text" spellcheck="false">案件<br>需求理解</span>
+            <span class="pf-sub" spellcheck="false"><span style="letter-spacing: 0.16px;">萃取本案核心成功條件、產業／職務／職級特徵等</span></span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step">
+            <span class="pf-num">3</span>
+            <span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">候選池／水流／</span><br style="letter-spacing: 0.16px;"><span style="letter-spacing: 0.16px;">分派資格規則</span></span>
+            <span class="pf-sub" spellcheck="false"><br></span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step new">
+            <div class="pf-corner">📄🏢👤</div>
+            <span class="pf-num">4</span>
+            <span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">Embedding 相似度計算</span></span>
+            <span class="pf-sub" spellcheck="false"><span style="letter-spacing: 0.16px;">計算需求側與顧問向量相似度，產生初步排序</span></span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step">
+            <span class="pf-num">5</span>
+            <span class="pf-text" spellcheck="false">輸出 Top N<br>顧問清單與分數</span>
+            <span class="pf-sub" spellcheck="false"><br></span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step new">
+            <div class="pf-corner">📊</div>
+            <span class="pf-num">6</span>
+            <span class="pf-text" spellcheck="false"><span style="letter-spacing: 0.16px;">LLM reranking</span></span>
+            <span class="pf-sub" spellcheck="false">讀取下方比較包，只在 Top N 內受控重排</span>
+          </div>
+          <span class="pf-arrow">→</span>
+          <div class="pf-step">
+            <span class="pf-num">7</span>
+            <span class="pf-text" spellcheck="false">輸出 Final Top N<br>+調整理由</span>
+            <span class="pf-sub" spellcheck="false">輸出主管確認事項、風險與推薦理由追溯</span>
+          </div>
+        </div>
+
+        <div class="pf-info-grid">
+          <div class="pf-info-panel">
+            <div class="pf-info-title" spellcheck="false">資料包說明</div>
+            <div class="pf-pkg-row">
+              <div class="pf-pkg-icon">📄</div>
+              <div>
+                <div class="pf-pkg-name" spellcheck="false">需求端 [案件資料包] → 委託案件GAR文本包<span class="pf-method-tag" spellcheck="false">GAR</span></div>
+                <div class="pf-pkg-desc" spellcheck="false">由新案件 JD、公司資料與職務資訊生成，包含案件本質、<font color="#c97a3e">核心成功條件(匹配判斷提示、替代／降權條件、信心程度)</font>與待確認事項<span style="letter-spacing: 0.16px;">，供 Embedding 與 LLM 使用</span>。</div>
+              </div>
+            </div>
+            <div class="pf-pkg-row">
+              <div class="pf-pkg-icon">👤</div>
+              <div>
+                <div class="pf-pkg-name" spellcheck="false">供給端 [顧問能力包]<span class="pf-method-tag" spellcheck="false">Reduce</span></div>
+                <div class="pf-pkg-desc" spellcheck="false">整合顧問每筆歷史案件GAR文本(含產業／職務語意、成交／推薦證據)。</div>
+              </div>
+            </div>
+            <div class="pf-pkg-row">
+              <div class="pf-pkg-icon">🧾</div>
+              <div>
+                <div class="pf-pkg-name" spellcheck="false">證據層 [歷史案件資料] → 單筆歷史案件GAR文本包<span class="pf-method-tag" spellcheck="false">GAR</span></div>
+                <div class="pf-pkg-desc" spellcheck="false">離線建包原料，不在新案主流程中獨立比對；用於生成與更新顧問能力包，也可在 Top N 解釋階段回查作為推薦理由依據。</div>
+              </div>
+            </div>
+            <div class="pf-pkg-row">
+              <div class="pf-pkg-icon">🏢</div>
+              <div>
+                <div class="pf-pkg-name" spellcheck="false">雙邊 [公司資料包]</div>
+                <div class="pf-pkg-desc" spellcheck="false">整理公司業務本質、產品／服務型態、價值鏈位置與公開資料補充，作為新案件理解包與顧問能力包比對時的公司側語料來源。</div>
+              </div>
+            </div>
+            <div class="pf-pkg-row">
+              <div class="pf-pkg-icon">📊</div>
+              <div>
+                <div class="pf-pkg-name" spellcheck="false">[候選顧問比較包]</div>
+                <div class="pf-pkg-desc" spellcheck="false">彙整 Top N 顧問對本案的能力證據、相似案件來源、初始分數、資料缺口與風險，供 LLM Reranking 比較使用。</div>
+              </div>
+            </div>
+          </div>
+          <div class="pf-info-panel">
+            <div class="pf-info-title" spellcheck="false">關鍵調整重點</div>
+            <div class="pf-key-item">
+              <span class="pf-key-num" spellcheck="false">1</span>
+              <span spellcheck="false"><span style="letter-spacing: 0.16px;" spellcheck="false">針對新案件進件，根據公司產業本質、職務本質等，補充產生更精確的query文本脈絡(委託案件GAR文本包)。</span></span>
+            </div>
+            <div class="pf-key-item">
+              <span class="pf-key-num" spellcheck="false">2</span>
+              <span spellcheck="false">顧問能力包的底層證據來源為每筆歷史案件，故也會針對每筆歷史案件進行GAR，轉換成可代表顧問歷史案件經驗的query文本。</span>
+            </div>
+            <div class="pf-key-item">
+              <span class="pf-key-num" spellcheck="false">3</span>
+              <span spellcheck="false"><span style="letter-spacing: 0.16px;" spellcheck="false">彙整顧問的每筆歷史案件</span><span style="letter-spacing: 0.16px;" spellcheck="false">query文本，再</span>Reduce成顧問能力包。</span>
+            </div>
+            <div class="pf-key-item">
+              <span class="pf-key-num" spellcheck="false">4</span>
+              <span spellcheck="false">LLM reranking 仍只在 Top N 內調整排序，不新增候選顧問、不產生精確分數、不推翻硬性規則。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pf-note-bar">
+          <span class="pf-note-bar-icon" spellcheck="false">💡</span>
+          <span spellcheck="false">GAR (Generative AI Augmented Retrieval)：<br>Reduce：將幾十筆或幾百筆的單筆歷史案件文本，合併成這位顧問的能力輪廓。</span>
+        </div>
       </div>
     </div>
 
@@ -2133,28 +3151,29 @@
 <div class="tldr" id="tldr">
   <div class="label" spellcheck="false">差異說明</div>
   <div class="quote" spellcheck="false">
-    LLM 不取代原來的候選池與硬性資格邊界；Baseline Score 從原先機器學習參數權重公式，改為用 LLM Embedding（語意向量）計算初始分數。<br>
-    接著再由 LLM 根據語意間的證據，在 Top N 內重新調整排序、說明理由，讓排序更接近人思考。
+    LLM 不取代原來的候選池與硬性資格邊界；<u>Baseline Score 從原先機器學習參數權重公式，改為用 LLM Embedding</u>（語意向量）計算初始分數。再由 LLM 根據語意間的證據，在 Top N 內重新調整排序、說明理由，讓排序能更接近人思考。
   </div>
 </div>
 
 <!-- 整體架構 -->
-<h2 id="ch2" spellcheck="false">03 · 整體架構：<span style="letter-spacing: -0.01em;"> </span><span style="letter-spacing: -0.01em;">Input / Output 設計 (</span><span style="letter-spacing: -0.01em;">Embedding計算相似度 / LLM Reranking)</span><br></h2>
-<p spellcheck="false">LLM 每次看到的不是全公司資料，而是<strong>一份已經整理好的比較題</strong>。資料包不是把所有 JD、所有公司資料、所有顧問歷史案件一次丟給 LLM，而是拆成案件、公司、顧問與比較證據四個輸入層，再交由排序判斷規則約束。</p>
+<h2 id="ch2" spellcheck="false">03 · 整體架構：Input / Output 設計（Embedding 計算相似度 / LLM Reranking）</h2>
+<p spellcheck="false">把案件、公司與顧問整理成<strong>可計算、可比較的語料</strong>。第一階段由 Embedding 計算需求側與供給側的語意相似度，輸出 Baseline Score 與 Top N；第二階段才交給 LLM 在 Top N 內根據比較證據與排序判斷規則進行受控重排。</p>
 
-<div class="arch-io-title" spellcheck="false">Reranking Input / Output 設計</div>
+<div class="arch-io-title" spellcheck="false">Embedding / Reranking Input / Output 設計</div>
 <div class="arch-io-groups">
-  <div class="arch-io-group input-group" spellcheck="false">LLM 輸入</div>
-  <div class="arch-io-group output-group" spellcheck="false">LLM 輸出</div>
+  <div class="arch-io-group input-group" spellcheck="false">Embedding 輸入</div>
+  <div class="arch-io-group calc-group" spellcheck="false">Embedding 輸出</div>
+  <div class="arch-io-group rerank-group" spellcheck="false">Reranking 輸入</div>
+  <div class="arch-io-group output-group" spellcheck="false">Reranking 輸出</div>
 </div>
 <div class="arch-flow">
   <div class="arch-card l1">
     <div class="arch-head">
       <span class="arch-num">1</span>
-      <span class="arch-title" spellcheck="false">案件資料包</span>
+      <span class="arch-title" spellcheck="false">需求側語料</span>
     </div>
-    <span class="arch-pill" spellcheck="false">告訴 LLM：這個案子的本質是什麼</span>
-    <p class="arch-body" spellcheck="false">除了JD 摘要、表面分類外，還要有「本案核心成功條件」。</p>
+    <span class="arch-pill" spellcheck="false">給 Embedding：案件 + 公司本質</span>
+    <p class="arch-body" spellcheck="false">案件資料包引用公司資料包，整理 JD、職務本質、公司業務本質與本案核心成功條件假設。</p>
   </div>
 
   <span class="arch-arrow">→</span>
@@ -2162,10 +3181,10 @@
   <div class="arch-card l2">
     <div class="arch-head">
       <span class="arch-num">2</span>
-      <span class="arch-title" spellcheck="false">公司資料包</span>
+      <span class="arch-title" spellcheck="false">供給側語料</span>
     </div>
-    <span class="arch-pill" spellcheck="false">告訴 LLM：這家公司靠什麼創造價值</span>
-    <p class="arch-body" spellcheck="false">整理公司業務本質、價值鏈位置、產品／服務型態、相鄰業務與特殊確認點。</p>
+    <span class="arch-pill" spellcheck="false">給 Embedding：顧問能力輪廓</span>
+    <p class="arch-body" spellcheck="false">顧問能力包整理產業、公司本質、職務職級、成交證據、推薦證據、負載與風險。</p>
   </div>
 
   <span class="arch-arrow">→</span>
@@ -2173,10 +3192,10 @@
   <div class="arch-card l3">
     <div class="arch-head">
       <span class="arch-num">3</span>
-      <span class="arch-title" spellcheck="false">顧問能力包</span>
+      <span class="arch-title" spellcheck="false">Baseline / Top N</span>
     </div>
-    <span class="arch-pill" spellcheck="false">告訴 LLM：顧問真正有什麼證據</span>
-    <p class="arch-body" spellcheck="false">整理顧問歷史案件、公司業務本質經驗、職務職級能力、成功證據、負載與風險。</p>
+    <span class="arch-pill" spellcheck="false">Embedding 計算輸出</span>
+    <p class="arch-body" spellcheck="false">系統用語意相似度計算 Baseline Score，產生初始排序與 Top N 候選池。</p>
   </div>
 
   <span class="arch-arrow">→</span>
@@ -2186,8 +3205,8 @@
       <span class="arch-num">4</span>
       <span class="arch-title" spellcheck="false">候選顧問比較包</span>
     </div>
-    <span class="arch-pill" spellcheck="false">告訴 LLM：可以拿什麼證據比較人</span>
-    <p class="arch-body" spellcheck="false">不是只看分數，而是展開產業、公司本質、職務、相似案例、成交證據、負載與風險。</p>
+    <span class="arch-pill" spellcheck="false">給 LLM：Top N 證據展開</span>
+    <p class="arch-body" spellcheck="false">不是只丟分數，而是展開產業、公司本質、職務、相似案例、成交證據與風險。</p>
   </div>
 
   <span class="arch-arrow">→</span>
@@ -2197,7 +3216,7 @@
       <span class="arch-num">5</span>
       <span class="arch-title" spellcheck="false">排序判斷規則</span>
     </div>
-    <span class="arch-pill" spellcheck="false">告訴 LLM：可以怎麼想、什麼不能推翻</span>
+    <span class="arch-pill" spellcheck="false">給 LLM：約束怎麼重排</span>
     <p class="arch-body" spellcheck="false">硬規則、案件本質判斷、分數使用、治理因素介入時機與輸出格式，限制 LLM 決策邊界。</p>
   </div>
 
@@ -2208,10 +3227,11 @@
       <span class="arch-num">6</span>
       <span class="arch-title" spellcheck="false">LLM 輸出</span>
     </div>
-    <span class="arch-pill" spellcheck="false">給可追蹤的決策理由</span>
-    <p class="arch-body" spellcheck="false">Top 3~5 排序、推薦理由、差異、風險與主管確認事項。</p>
+    <span class="arch-pill" spellcheck="false">Final ranking + 可追蹤理由</span>
+    <p class="arch-body" spellcheck="false">輸出 Top 3~5 排序、調整理由、差異、風險與主管確認事項。</p>
   </div>
 </div>
+<div class="arch-io-callout" spellcheck="false"><strong>簡化理解：</strong>Embedding 階段的輸出是「Baseline Score / Top N」，用來回答「哪些顧問語意上最接近這個案子」；LLM Reranking 階段的輸出是「Final Ranking + 調整理由」，用來回答「在 Top N 裡，誰最符合本案核心成功條件，且哪些風險需要主管確認」。</div>
 
 
 <!-- 第一層 -->
@@ -2225,18 +3245,18 @@
       <div class="se-section-label">一、案件原始需求</div>
       <div class="se-field"><div class="se-field-name" spellcheck="false">案件產業</div><div class="se-field-source" spellcheck="false">案件原始資料</div><div class="se-field-desc" spellcheck="false">產業分類與文字描述；僅作表層分類，不取代公司業務本質判斷</div></div>
       <div class="se-field"><div class="se-field-name" spellcheck="false">職務名稱 / 描述</div><div class="se-field-source" spellcheck="false">JD / 職缺資料</div><div class="se-field-desc" spellcheck="false">原始職缺名稱、職責描述、任務線索與限制條件</div></div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">職務類型 / 職務本質</div><div class="se-field-source" spellcheck="false">JD + 職務智識庫</div><div class="se-field-desc" spellcheck="false">業務、研發、財務、人資、營運、供應鏈等；需判斷此職務實際功能本質</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務類型&nbsp;</div><div class="se-field-source" spellcheck="false">JD</div><div class="se-field-desc" spellcheck="false">業務、研發、財務、人資、營運、供應鏈等；需判斷此職務實際功能本質</div></div>
       <div class="se-field"><div class="se-field-name" spellcheck="false">職級 / 管理層級</div><div class="se-field-source" spellcheck="false">JD / 案件欄位</div><div class="se-field-desc" spellcheck="false">專員、主管、經理、總監、高階主管；含是否帶人、是否跨部門協調</div></div>
       <div class="se-field"><div class="se-field-name" spellcheck="false">客戶價值 / 限制條件</div><div class="se-field-source" spellcheck="false">案件原始資料</div><div class="se-field-desc" spellcheck="false">是否大客戶、重要客戶、長期經營客戶；同時保留地區、語言、排除條件等限制</div></div>
       <div class="se-section-label">二、公司資料包引用</div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">本案採用的公司側語料<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包</div><div class="se-field-desc" spellcheck="false">採用公司業務本質、價值鏈位置、產品 / 服務型態與相鄰業務本質，作為需求側語料</div></div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">公司側特殊確認點<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包</div><div class="se-field-desc" spellcheck="false">引用 special_confirmation_points；只作主管確認、加分證據或風險提醒，不直接併入主相似度</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">本案採用的公司側語料<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包(<font color="#c97a3e">B端智識庫</font>)</div><div class="se-field-desc" spellcheck="false">採用公司業務本質、價值鏈位置、產品 / 服務型態與相鄰業務本質，作為需求側語料</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">公司側特殊確認點<span style="font-weight: normal;"><font color="#c97a3e">(註1)</font></span></div><div class="se-field-source" spellcheck="false">公司資料包<span style="letter-spacing: 0.16px;">(B端智識庫)</span></div><div class="se-field-desc" spellcheck="false">引用 special_confirmation_points；只作主管確認、加分證據或風險提醒，不直接併入主相似度</div></div>
       <div class="se-section-label">三、職務輪廓補充</div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">職務輪廓補充<font color="#c97a3e" style="font-weight: normal;">(註2)</font></div><div class="se-field-source" spellcheck="false">職務智識庫</div><div class="se-field-desc" spellcheck="false">這類職務在市場上通常做什麼、需要哪些 hard skills、常見背景與招募難點</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false">職務輪廓補充<font color="#c97a3e" style="font-weight: normal;">(註2)</font></div><div class="se-field-source" spellcheck="false"><font color="#c97a3e">職務智識庫</font></div><div class="se-field-desc" spellcheck="false">這類職務在市場上通常做什麼、需要哪些 hard skills、常見背景與招募難點</div></div>
       <div class="se-field"><div class="se-field-name" spellcheck="false">職務特殊確認點<font color="#c97a3e" style="font-weight: normal;">(註2)</font></div><div class="se-field-source" spellcheck="false">JD + 職務智識庫</div><div class="se-field-desc" spellcheck="false">特定認證、法規、製程、工具、客戶場景；是否為核心條件需在複合判斷中說明</div></div>
-      <div class="se-section-label">四、公司 × 職務複合判斷</div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">本案公司 × 職務判斷</div><div class="se-field-source" spellcheck="false">案件資料包產生流程</div><div class="se-field-desc" spellcheck="false">判斷這個職務放在這家公司時，哪些能力會變得重要；不是單看公司，也不是單看職稱</div></div>
-      <div class="se-field"><div class="se-field-name" spellcheck="false">本案核心成功條件<span style="color: rgb(201, 122, 62); font-weight: normal;">(註3)</span></div><div class="se-field-source" spellcheck="false">LLM 假設輸出</div><div class="se-field-desc" spellcheck="false">這個「職務」在這家「公司」要成功，需要什麼顧問經驗；需標示信心與待驗證事項</div></div>
+      <div class="se-section-label has-prompt-tip">四、公司 × 職務複合判斷<span class="prompt-tip-actions"><button type="button" class="prompt-tip prompt-tip-inline" data-prompt-tip="supervisorDecisionExample" aria-haspopup="dialog">範例</button><button type="button" class="prompt-tip prompt-tip-inline" data-prompt-tip="supervisorDecision" aria-haspopup="dialog">📄 分析欄位 Prompt</button></span></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false"><font color="#c97a3e">本案公司 × 職務判斷</font></div><div class="se-field-source" spellcheck="false"><span style="letter-spacing: 0.16px;">LLM 歸納</span></div><div class="se-field-desc" spellcheck="false">判斷這個職務放在這家公司時，哪些能力會變得重要；不是單看公司，也不是單看職稱</div></div>
+      <div class="se-field"><div class="se-field-name" spellcheck="false"><font color="#c97a3e">本案核心成功條件</font><span style="color: rgb(201, 122, 62); font-weight: normal;">(註3)</span></div><div class="se-field-source" spellcheck="false">LLM 假設輸出</div><div class="se-field-desc" spellcheck="false">這個「職務」在這家「公司」要成功，需要什麼顧問經驗；需標示信心與待驗證事項</div></div>
     </div>
   </div>
   <div class="se-col">
@@ -2285,9 +3305,7 @@
 6. 客戶端技術溝通
 
 <font color="#c97a3e">五、公司 × 職務複合判斷與本案核心成功條件<br>本案引用的公司資料包顯示，這家公司本質是設備研發製造商，
-不只是一般半導體產業公司；本案職務也不是一般研發職，而是需要帶領技術團隊、
-處理產品開發、跨部門協作與客戶端技術溝通的研發主管。
-因此，顧問是否熟悉「技術研發型設備公司的人才結構」非常重要。
+不只是一般半導體產業公司；本案職務也不是一般研發職，而是需要帶領技術團隊、處理產品開發、跨部門協作與客戶端技術溝通的研發主管。因此，顧問是否熟悉「技術研發型設備公司的人才結構」非常重要。
 1. 研發主管、技術主管或機構設計管理經驗優先。
 2. 半導體設備、精密機械、自動化設備或設備研發相關經驗加分。
 3. 若產業經驗與職務經驗衝突，優先看「研發主管 / 技術管理 / 設備研發」相關經驗。
@@ -2296,15 +3314,15 @@
   </div>
 </div>
 
-<div class="callout" spellcheck="false"><font color="#c97a3e"><b>案件資料包註記：</b></font><div><font color="#c97a3e"><b>註1：公司側語料引用：</b></font><span style="color: rgb(201, 122, 62);">公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點由「公司資料包」維護，<u>由</u></span><span style="letter-spacing: 0.16px;"><u style=""><font color="#2c5282">【B端智識庫 API】補足</font></u></span><span style="color: rgb(201, 122, 62); letter-spacing: 0.01em;">；案件資料包只引用版本與本案採用內容，不重新定義公司主檔。</span></div><div><font color="#c97a3e"><b>註2：職務輪廓補充：</b>保留在案件資料包，由 JD 與</font><u style=""><font color="#c97a3e">【</font><font color="#2c5282">職務智識庫 API】補足</font><font color="#c97a3e">，</font></u><font color="#c97a3e">用來判斷這個職務在市場上的實際功能、hard skills 與招募難點。</font></div><div><span style="color: rgb(201, 122, 62);"><b>註3：本案核心成功條件：</b>保留在案件資料包，由 LLM 依「公司資料包引用 + JD + 職務輪廓補充」產出假設，需標示信心程度與待驗證事項。</span></div></div>
+<div class="callout" spellcheck="false"><font color="#c97a3e"><b>案件資料包註記：</b></font><div><font color="#c97a3e"><b>註1：公司側語料引用：</b></font><span style="color: rgb(201, 122, 62);">公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點由「公司資料包」維護，<u>由</u></span><span style="letter-spacing: 0.16px;"><u style=""><font color="#2c5282">【B端智識庫 API】補足(已有)</font></u></span><span style="color: rgb(201, 122, 62); letter-spacing: 0.01em;">；案件資料包只引用版本與本案採用內容，不重新定義公司主檔。</span></div><div><font color="#c97a3e"><b>註2：職務輪廓補充：</b>保留在案件資料包，可由 JD 與</font><font color="#2c5282"><font style="text-decoration-line: underline;">【</font><font style="text-decoration-line: underline;">職務智識庫 API】補足(未來)</font></font><font color="#c97a3e" style="">，</font><font color="#c97a3e">用來判斷這個職務在市場上的實際功能、hard skills 與招募難點。</font></div><div><span style="color: rgb(201, 122, 62);"><b>註3：本案核心成功條件：</b>保留在案件資料包，由 LLM 依「公司資料包引用 + JD + 職務輪廓補充」產出假設，需標示信心程度與待驗證事項。</span></div></div>
 
 <!-- 第二層：公司資料包 -->
 <h2 id="ch3a" spellcheck="false">05 · 第二層：公司資料包</h2>
-<p spellcheck="false">公司資料包的目的，是把「公司到底靠什麼創造價值」整理成可比對、可追溯的語料。它不是公司介紹頁，而是案件資料包與顧問能力包之間的公司側橋梁：提供公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點。</p>
+<p spellcheck="false">公司資料包的目的，是把「公司到底靠什麼創造價值」整理成可比對、可追溯的語料。<font color="#c97a3e">是案件資料包與顧問能力包之間的公司側橋梁</font>：<font color="#000000">提供公司業務本質、價值鏈位置、產品／服務型態、相鄰業務本質與特殊確認點。</font></p>
 
 <div class="collapsible-block">
   <input class="collapsible-state" type="checkbox" id="companyPackageToggle" aria-controls="company-package-schema" aria-label="展開或收合公司資料包欄位與範例">
-  <label class="collapsible-toggle collapsible-toggle-top" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="true">
+  <label class="collapsible-toggle collapsible-toggle-top" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="false">
     <span>收合公司資料包欄位與範例</span>
     <span class="collapsible-toggle-icon" aria-hidden="true">↑</span>
   </label>
@@ -2400,7 +3418,7 @@
 </div>
   </div>
   <div class="collapsible-fade" aria-hidden="true"></div>
-  <label class="collapsible-toggle collapsible-toggle-bottom" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="true">
+  <label class="collapsible-toggle collapsible-toggle-bottom" for="companyPackageToggle" role="button" tabindex="0" aria-expanded="false">
     <span>展開公司資料包欄位與範例</span>
     <span class="collapsible-toggle-icon" aria-hidden="true">↓</span>
   </label>
@@ -2410,11 +3428,42 @@
 
 <!-- 第三層：顧問能力包 -->
 <h2 id="ch3b" spellcheck="false">06 · 第三層：顧問能力包</h2>
-<p spellcheck="false">顧問能力包的目的，是讓系統對每位候選顧問產生<strong>立體的能力輪廓認識</strong>——不是只看一個總分，而是知道此顧問真正擅長哪些產業、公司業務本質、價值鏈位置、職務本質與職級，以及哪些推論不成立。完整分析版提供 PM、主管與 LLM Reranking 閱讀，同時是 Embedding 語料版的上游來源——正式語料版（v2）依同一套語意匹配規則，由完整分析版萃取產出（完整分析版 → 語料版 → embedding），而非直接從歷史統計生成。</p>
+<p spellcheck="false">顧問能力包的目的，是讓系統對每位候選顧問產生<strong>立體的能力輪廓分析</strong>——不是只看一個總分，而是知道此<font color="#c97a3e">顧問真正擅長哪些產業、公司業務本質、價值鏈位置</font>、職務本質與職級，以及哪些推論不成立。(完整分析文字版 → Embedding語料版)</p>
+
+<div class="flow consultant-source-flow" spellcheck="false">
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">歷史案件原始資料</div>
+      <div class="flow-desc" spellcheck="false">從顧問歷史案件庫取得每筆案件的公司、職務、職級、狀態、推薦／成交與顧問歸屬證據。</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">AI 生成 case_matching_profile</div>
+      <div class="flow-desc" spellcheck="false">把每筆歷史案件整理成「案件經驗小卡」，說明這筆舊案可以證明顧問具備什麼經驗，以及哪些相似判斷不可外推。</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">彙整到顧問能力包</div>
+      <div class="flow-desc" spellcheck="false">依顧問合併多筆 case_matching_profile，整理出可追溯的能力輪廓、成功證據、資料缺口與風險邊界。</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-body">
+      <div class="flow-title" spellcheck="false">形成顧問供給側語意</div>
+      <div class="flow-desc" spellcheck="false">產出顧問的產業語意、職務語意、經驗證據與擅長場景，供新案件理解包進行語意比對。</div>
+    </div>
+  </div>
+</div>
 
 <div class="collapsible-block">
   <input class="collapsible-state" type="checkbox" id="consultantPackageToggle" aria-controls="consultant-package-schema" aria-label="展開或收合顧問能力包欄位與範例">
-  <label class="collapsible-toggle collapsible-toggle-top" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="true">
+  <label class="collapsible-toggle collapsible-toggle-top" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="false">
     <span>收合欄位與範例</span>
     <span class="collapsible-toggle-icon" aria-hidden="true">↑</span>
   </label>
@@ -2484,14 +3533,12 @@
 
 顧問姓名：吳XX
 顧問 ID：99250005
-能力包版本：顧問能力包 prompt v1
 
 資料範圍：
 - 歷史案件數：131 筆，且 131 個不重複 CAID
 - 案件成立日：2020/07/16 17:19 至 2026/05/11 14:22
 - 有 Offer 日期案件：119 筆
-- 資料限制：缺少獨立推薦成功欄位、目前負載、
-  主管評價、完整推薦過程與最新可承接狀態
+
 
 一、顧問基本輪廓
 - 主要角色：承辦為主。131 筆中，承辦顧問 123 筆，
@@ -2504,12 +3551,7 @@
   軟性商品、B2B 製造與外銷供應鏈。
 
 基本摘要：
-吳XX的歷史案件明顯集中在非科技產業，尤其是
-紡織成衣與相關供應鏈。她有大量 Offer / 成交證據，
-且多數案件是承辦顧問，不只是零星合作參與。職務能力
-集中在成衣外銷、國外業務、供應鏈 / 生產管理、財會
-與人資等 B2B 營運型職缺。高階主管案件有成功證據，
-但應限定在相近產業與職務本質使用。
+吳XX的歷史案件明顯集中在非科技產業，尤其是紡織成衣與相關供應鏈。她有大量 Offer / 成交證據，且多數案件是承辦顧問，不只是零星合作參與。職務能力集中在成衣外銷、國外業務、供應鏈 / 生產管理、財會與人資等 B2B 營運型職缺。高階主管案件有成功證據，但應限定在相近產業與職務本質使用。
 
 二、產業能力輪廓
 主要產業：
@@ -2534,9 +3576,7 @@
 - 半導體、IC 設計或深度硬體研發：無足夠相似證據。
 
 產業能力摘要：
-吳XX最有把握的產業範圍是紡織成衣、服飾 /
-軟性商品、外銷供應鏈與相關 B2B 製造 / 批發場景。
-科技製造、建築、塑膠與電機工程雖有接觸或個別案例，
+吳XX最有把握的產業範圍是紡織成衣、服飾 /軟性商品、外銷供應鏈與相關 B2B 製造 / 批發場景。科技製造、建築、塑膠與電機工程雖有接觸或個別案例，
 但不應視為主要強項。
 
 三、公司業務本質輪廓
@@ -2561,15 +3601,11 @@
 相鄰業務本質辨識：
 - 可支持軟性材料、非科技製造、工廠端營運、
   供應鏈與生產管理案件。
-- 不織布、衛材、口罩、濕紙巾或日用品製造可視為
-  部分相鄰，但仍需確認製程、法規與認證條件。
+- 不織布、衛材、口罩、濕紙巾或日用品製造可視為部分相鄰，但仍需確認製程、法規與認證條件。
 - 不可直接等同具備 ISO22716、化妝品 GMP 或 HACCP 經驗。
 
 公司業務本質摘要：
-此顧問較熟悉以實體產品、外銷訂單、生產交付與
-跨部門協作為核心的公司。其資料較能支撐 B2B 製造、
-成衣供應鏈、批發代理與海外營運場景；不宜因少量
-科技案件就推論熟悉半導體、純軟體或深度研發公司。
+此顧問較熟悉以實體產品、外銷訂單、生產交付與跨部門協作為核心的公司。其資料較能支撐 B2B 製造、成衣供應鏈、批發代理與海外營運場景；不宜因少量科技案件就推論熟悉半導體、純軟體或深度研發公司。
 
 四、職務能力輪廓
 主要職務類型：
@@ -2754,7 +3790,7 @@ HACCP 資料未提供。
 </div>
   </div>
   <div class="collapsible-fade" aria-hidden="true"></div>
-  <label class="collapsible-toggle collapsible-toggle-bottom" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="true">
+  <label class="collapsible-toggle collapsible-toggle-bottom" for="consultantPackageToggle" role="button" tabindex="0" aria-expanded="false">
     <span>展開完整欄位與範例</span>
     <span class="collapsible-toggle-icon" aria-hidden="true">↓</span>
   </label>
@@ -2767,8 +3803,174 @@ HACCP 資料未提供。
   <div class="prompt-tip-card" role="dialog" aria-modal="true" aria-labelledby="promptTipTitle">
     <button type="button" class="prompt-tip-close" data-prompt-tip-close="" aria-label="關閉提示">×</button>
     <div class="prompt-tip-eyebrow">Prompt Tips</div>
-    <h3 id="promptTipTitle" spellcheck="false"></h3>
-    <div class="prompt-tip-body" id="promptTipBody"></div>
+    <h3 id="promptTipTitle" spellcheck="false">Embedding 語料版 Prompt</h3>
+    <div class="prompt-tip-body" id="promptTipBody">
+  <div class="prompt-tip-source">來源：prompts/embedding_corpus_prompt_v2.md（正式版，由完整分析版萃取；前身 v1 為歷史統計 draft）</div>
+  <pre class="prompt-tip-pre" spellcheck="false"># Embedding Corpus Prompt v2
+
+Prompt family：`embedding_corpus`  
+Major version：`v2`，代表 Embedding 語料生成任務的第二個正式版本。  
+狀態：Active reference prompt  
+用途：由「顧問能力包｜完整分析版」產出工程可向量化的顧問供給側語意語料。  
+適用位置：`consultant_capability_package` 完整分析版完成後、工程 embedding pipeline 前。  
+共用規則：需遵守 `docs/15_semantic_matching_rules.md` 的需求側 / 供給側鏡像語料、相鄰業務本質與特殊確認點判斷邏輯。  
+
+本 prompt 不直接從歷史統計或 Top counts 生成正式語料。正式 v2 必須以完整能力包為主要輸入，保留語意、證據與能力邊界。
+
+## A. 任務
+
+你是一位獵才顧問語意語料整理助理。
+
+你的任務是根據單一顧問的「顧問能力包｜完整分析版」，產出 `embedding_corpus_v2`。這份語料不是主管閱讀報告，而是提供工程進行 chunk、embedding、vector DB 建索引、semantic similarity 與檢索 explain 使用。
+
+語料必須能和案件資料包的需求側語料鏡像比對，包含：
+
+- 產業與產業相鄰性。
+- 公司業務本質。
+- 公司實際靠什麼產品、服務、技術或客戶關係創造價值。
+- 價值鏈位置。
+- 產品 / 服務型態。
+- 職務本質。
+- 職級與管理層級。
+- 相似案件或成功證據。
+- 特殊確認點與資料缺口。
+
+## B. 輸入資料
+
+正式 v2 必填輸入：
+
+- `consultant_capability_package` 完整分析版。
+- 顧問姓名與顧問 ID。
+- 完整能力包版本或產出日期。
+- 資料範圍與資料限制。
+
+可選輸入：
+
+- `company_business_profile`，用於補足歷史案件公司的業務本質、價值鏈位置、產品 / 服務型態。
+- 歷史案件統計表，僅能作為 `source_stats` 或輔助檢查，不得取代完整能力包語意。
+- 舊版 embedding corpus，僅能作為格式參考，不得直接覆寫 v2 語意。
+
+若沒有完整能力包，只能輸出草稿，且必須標示：
+
+```text
+generation_method = history_stats_semantic_synthesis
+limitations 包含「尚未使用完整能力包生成，僅供格式驗證或初步檢查」
+```
+
+正式版本必須標示：
+
+```text
+generation_method = full_analysis_seeded_semantic_profile
+```
+
+## C. 生成原則
+
+1. 先讀完整能力包，再萃取語意輪廓。
+2. 不要把產業 Top counts、職稱 Top counts 或案件數直接改寫成主要能力結論。
+3. 請使用完整句描述顧問熟悉的公司業務本質、價值鏈位置與職務本質。
+4. 請區分「主要能力」、「次要接觸」、「相鄰經驗」與「不可外推邊界」。
+5. 主匹配語料與特殊確認點語料必須分開。
+6. ISO22716、化妝品 GMP、HACCP、特定製程、機台、認證或法規若沒有明確證據，請列為資料不足或待確認，不得寫成顧問能力缺口。
+7. 不得自行新增完整能力包沒有支持的成交紀錄、推薦成功、主管評價或特殊專長。
+8. 不得生成精確分數，不得替代 candidate pool、department pool、waterflow、assignment eligibility、baseline score 或 LLM reranking。
+9. 顧問姓名、部門、課別與案件數可作為 metadata，不應作為主要 semantic similarity 內容。
+10. 若完整能力包內部有不一致或資料不足，請在 `limitations` 中明確標示。
+
+## D. 輸出 JSON Schema
+
+請輸出單一 JSON object：
+
+```json
+{
+  "corpus_version": "embedding_corpus_v2",
+  "prompt_version": "embedding_corpus_prompt_v2",
+  "corpus_role": "consultant_capability_supply_side",
+  "generation_method": "full_analysis_seeded_semantic_profile",
+  "consultant": {
+    "consultant_id": "string_or_data_not_provided",
+    "consultant_name": "string",
+    "team": "string_or_data_not_provided"
+  },
+  "source_versions": {
+    "capability_package_version": "string_or_date",
+    "company_business_profile_version": "string_or_data_not_provided",
+    "history_data_range": "string_or_data_not_provided"
+  },
+  "semantic_profile": {
+    "consultant_summary": "完整句摘要顧問主要能力與適合案件",
+    "primary_industries": ["主要產業語意，不只放標籤"],
+    "secondary_industries": ["次要接觸產業"],
+    "company_business_nature": ["顧問熟悉的公司業務本質"],
+    "value_chain_position": ["上游、製造、品牌、通路、服務、系統整合等"],
+    "product_service_type": ["硬體產品、軟體服務、專案型服務、代理、顧問等"],
+    "role_function_nature": ["職務本質與招募功能"],
+    "seniority_scope": ["職級、管理幅度或角色層級"],
+    "adjacent_business_nature": ["可支持相鄰判斷的經驗"],
+    "success_evidence": ["有來源支持的成功或相似案件證據"],
+    "risk_boundaries": ["不可過度推論處"]
+  },
+  "main_matching_corpus": "一段可直接 embedding 的主匹配語料，描述顧問供給側能力。",
+  "facet_embedding_texts": {
+    "industry_and_business_nature": "產業與公司業務本質分面語料",
+    "value_chain_and_product_service": "價值鏈與產品服務型態分面語料",
+    "role_function_and_seniority": "職務本質、職級與管理層級分面語料",
+    "adjacent_fit": "相鄰業務本質與可外推邊界分面語料",
+    "success_evidence": "相似案件、成交或推薦成功證據分面語料",
+    "risk_boundaries": "資料限制與不宜外推分面語料"
+  },
+  "checkpoint_embedding_texts": {
+    "certifications_or_regulations": "特殊認證、法規或標準的證據狀態",
+    "specific_process_or_equipment": "特定製程、設備、機台或產品標準的證據狀態",
+    "client_or_channel_constraints": "特定客戶型態、通路或關係型需求的證據狀態",
+    "human_review_needed": "需要主管或 PM 確認的事項"
+  },
+  "tags": {
+    "industry_tags": ["僅供篩選"],
+    "function_tags": ["僅供篩選"],
+    "business_nature_tags": ["僅供篩選"],
+    "checkpoint_tags": ["僅供篩選"]
+  },
+  "source_stats": {
+    "case_count": "number_or_data_not_provided",
+    "deal_count": "number_or_data_not_provided",
+    "history_period": "string_or_data_not_provided",
+    "has_job_description": "true_false_or_data_not_provided",
+    "has_success_label": "true_false_or_data_not_provided"
+  },
+  "limitations": [
+    "資料限制、欄位缺口或不宜外推事項"
+  ]
+}
+```
+
+## E. Chunk 產出規則
+
+若需要同時輸出 chunks，請依下列 chunk type 產生：
+
+| chunk_type | 使用方式 | main_similarity_allowed |
+|---|---|---|
+| `main_matching` | 主要 semantic similarity | true |
+| `facet_industry_business` | 產業與公司業務本質分面檢索 | true |
+| `facet_value_chain_product` | 價值鏈與產品 / 服務型態分面檢索 | true |
+| `facet_role_function` | 職務本質與職級分面檢索 | true |
+| `facet_adjacent_fit` | 相鄰業務本質與可外推邊界 | true |
+| `facet_success_evidence` | 相似案件或成功證據檢索 | true |
+| `risk_boundaries` | 風險、資料缺口與不可外推 | false |
+| `checkpoint` | 特殊認證、法規、製程、機台或主管確認點 | false |
+
+`checkpoint` 不應直接進入主要 similarity。若工程需要把特殊條件納入排序，必須另行建立 checkpoint signal，並保留是否為職務核心本質的標記。
+
+## F. 品質檢查
+
+輸出前請檢查：
+
+- 是否已引用完整能力包，而不是只引用 Top counts。
+- 是否有描述公司業務本質與價值鏈位置。
+- 是否有區分主匹配語料與特殊確認點。
+- 是否有標記資料不足與不可外推邊界。
+- 是否沒有生成精確分數。
+- 是否沒有推翻候選池、部門池、水流或分派資格規則。</pre>
+</div>
   </div>
 </div>
 <template id="promptTipFullTemplate">
@@ -3269,6 +4471,376 @@ generation_method = full_analysis_seeded_semantic_profile
 - 是否沒有生成精確分數。
 - 是否沒有推翻候選池、部門池、水流或分派資格規則。</pre>
 </template>
+<template id="promptTipSupervisorDecisionTemplate">
+  <div class="prompt-tip-source">來源：prompts/supervisor_decision_analysis_columns_prompt_v2.md</div>
+  <pre class="prompt-tip-pre"># Supervisor Decision Analysis Columns Prompt v2
+
+Prompt family: `supervisor_decision_analysis_columns`
+Major version: `v2`
+用途：針對 `supervisor_decisions.xlsx` 的原始 row grain，生成案件理解與匹配判斷欄位，供人工理解、embedding 回測、顧問能力包比對與 LLM reranking 使用。
+
+---
+
+## 1. 角色
+
+你是獵才分案推薦系統的案件分析助理。
+
+你的任務不是替主管決定顧問，也不是產生精確分數，而是把「公司脈絡 × 職務需求 × 整包委託結構」整理成可回測、可解釋、可供 embedding similarity 與 LLM reranking 使用的分析欄位。
+
+你需要特別注意：一次委託案件可能包含多個職務。若同一個 `entrust_id` 下有多個不重複職務，你不能只逐一摘要職務，而必須進一步判斷這整包委託共同代表的客戶需求、人才市場脈絡，以及顧問匹配時應加權、可替代或應降權的經驗類型。
+
+---
+
+## 2. 輸入資料
+
+你會收到同一個 `entrust_id` 下的一筆或多筆 row。
+
+每筆 row 可能代表不同職務，也可能是同一職務因跨部門主管流轉、資料重複或流程紀錄而重複出現。
+
+輸入資料可能包含：
+
+* `entrust_id`
+* `cid`
+* `caid`
+* `job_rn`
+* `job`
+* `job_level`
+* `duty`
+* `required_exp_note`
+* `job_location`
+* 職缺分類欄位
+* `公司名稱`
+* `產業名稱`
+* `分工產業`
+* `顧問姓名`
+* 公司主檔資料：公司業務本質、價值鏈位置、產品／服務型態、公開描述、特殊確認點
+* 公開資訊補充：若公司主檔不足，可使用已提供的公開資訊摘要與來源
+
+---
+
+## 3. 生成目標
+
+請為每個輸入 row 產生分析欄位，核心目標如下：
+
+1. 判斷單一職務放在該公司脈絡下的本質。
+2. 產出單一職務的匹配判斷提示。
+3. 若同一個 `entrust_id` 有多個不重複職務，整合判斷整包委託的共同需求。
+4. 產出整包委託層級的匹配判斷提示。
+5. 對資料不足處進行有限度推論，但必須標示推論依據與信心程度，不可過度想像。
+
+---
+
+## 4. 推論與擴充規則
+
+因為新進委託案件在初期可能資訊不完整，你可以進行有限度的語意擴充，但必須遵守以下規則。
+
+### 4.1 判斷層級
+
+請將重要判斷分成三種層級：
+
+1. 明確事實
+   只包含案件資料中已直接出現的資訊，例如產業、公司描述、職務名稱、職務內容、職級、地點、要求條件。
+
+2. 合理推論
+   可根據產業、公司業務本質、職務名稱、職務內容、職級進行有限度推論，但必須符合常見產業與職務邏輯。
+   每一項合理推論都必須能回扣到輸入資料中的具體線索。
+
+3. 需補充確認
+   若某些條件可能會影響分案，但目前案件資料不足，請標示為「需補充確認」，不得直接當成加權或降權依據。
+
+### 4.2 信心程度
+
+針對合理推論，請標示信心程度：
+
+* 高：案件資料中有明確線索支持。
+* 中：可由產業、公司脈絡或職務內容合理推得，但仍需補充確認。
+* 低：僅為可能方向，不應作為排序主要依據。
+
+### 4.3 不可過度推論
+
+請避免以下錯誤：
+
+* 不要因為產業是半導體，就直接推論一定需要製程／設備經驗。
+* 不要因為職務名稱是主管，就直接推論一定是高階策略職。
+* 不要因為公司屬科技業，就把所有科技產業經驗都視為強相關。
+* 不要把資料中沒有出現的產品、技術、客戶類型、候選人來源當成確定條件。
+* 不要產出無法用於顧問比對的抽象句子，例如「需要專業能力佳」、「需要溝通能力好」、「需熟悉產業」。
+
+---
+
+## 5. 輸出欄位
+
+請為每個輸入 row 產生以下欄位。
+
+---
+
+### 5.1 `generated_company_single_job_assessment`
+
+用途：人工理解與 debug 為主，embedding 只作輔助。
+
+回答問題：
+
+「這個職務放在這家公司脈絡下，本質是什麼？」
+
+內容必須合併：
+
+* 職務本質判斷
+* 人才類型
+* 公司業務脈絡
+* 產業鏈或價值鏈位置
+* 為什麼不能只看表面職稱或產業分類
+* 顧問理解此職務時應抓住的核心需求
+
+請不要只是重組 JD。你要吸收公司脈絡後重新判斷此職務的真正需求。
+
+若公司資料不足，請標示「公司脈絡不足，以下為初步判斷」。
+
+---
+
+### 5.2 `generated_single_job_matching_guidance`
+
+用途：單一職務 embedding similarity、顧問能力包比對與 LLM reranking 的主要語料。
+
+回答問題：
+
+「針對這個單一職務，顧問匹配時哪些經驗應加權、哪些經驗可替代、哪些表面相似但應降權？」
+
+請用 3 到 6 點條列，每一點都要具備排序取捨意義。
+
+每一點請盡量使用以下句型：
+
+* 「A 的重要性高於 B」
+* 「若沒有 A，但具備 B，仍可視為高度相關」
+* 「若只有 A，但缺乏 B，相關性應下修」
+* 「A 經驗應優先於 B 經驗」
+* 「近期 A 紀錄比久遠 B 紀錄更有參考價值」
+* 「A 與 B 雖同屬某產業，但若缺少 C，不能視為強相關」
+
+內容應包含：
+
+* 顧問應熟悉的人才市場
+* 顧問過往相似案件或產業經驗
+* 顧問需要能辨識的候選人履歷關鍵證據
+* 可替代的相近經驗
+* 容易誤判或不適合的泛用人才池
+* 需降權的表面相似經驗
+
+請避免只寫：
+
+* 「顧問需具備相關產業經驗」
+* 「顧問需熟悉相關職務」
+* 「顧問需有相關經驗」
+
+這些不是匹配判斷提示，只是條件摘要。
+
+---
+
+### 5.3 `generated_company_entrust_jobs_assessment`
+
+用途：人工理解與 debug 為主，embedding 只作輔助。
+
+回答問題：
+
+「若同一個 `entrust_id` 有多個不重複職務，這整包委託在公司脈絡下共同代表什麼需求？」
+
+規則：
+
+* 若此 `entrust_id` 只有一個不重複職務，請填：`同單一職務分析。`
+* 若有多個不重複職務，請整合所有職務後判斷共同需求。
+* 跨部門重複列、同一職務重複流轉紀錄，不可被誤判為不同職務。
+* 同一個 `entrust_id` 的所有 row，此欄應相同。
+
+多職務整合時，請判斷：
+
+* 這包委託是否代表同一類人才需求的多個缺口。
+* 這包委託是否橫跨不同職能，但服務於同一公司業務情境。
+* 這包委託是否代表公司正在擴編、轉型、補強特定部門或建立某種能力。
+* 這包委託中，哪一類職務本質是共同核心，哪一類只是附屬或支援需求。
+* 顧問不能只看單一職稱，而應如何理解整包需求。
+
+請不要把多職務內容簡單拼接成摘要，而要產出整包委託的共同判斷。
+
+---
+
+### 5.4 `generated_entrust_matching_guidance`
+
+用途：多職務／整包委託 embedding similarity、顧問能力包比對與 LLM reranking 的主要語料。
+
+回答問題：
+
+「要承接這整包委託，顧問匹配時哪些跨職務經驗應加權、哪些經驗可替代、哪些表面相似但應降權？」
+
+規則：
+
+* 若此 `entrust_id` 只有一個不重複職務，請填：`同單一職務匹配判斷提示。`
+* 若有多個不重複職務，請用 3 到 6 點條列描述整包委託層級的顧問匹配判斷。
+* 條件要能用來比對顧問能力包與相似案件，不要寫成泛泛的職務摘要。
+* 同一個 `entrust_id` 的所有 row，此欄應相同。
+
+多職務整合時，請特別判斷：
+
+* 哪些顧問經驗可同時覆蓋多個職務。
+* 若顧問只熟悉其中一個職務，是否足以承接整包委託。
+* 產業經驗、職務經驗、職級經驗、人才市場經驗之間，哪一個更應加權。
+* 哪些相近產業或職務經驗可作為替代。
+* 哪些看似相關、但無法覆蓋整包需求的經驗應降權。
+* 若多職務之間差異很大，請明確指出此委託可能需要「跨職能人才市場理解」，而非單一職務經驗即可覆蓋。
+
+每一點請盡量具備「排序取捨」意義，而不是單純條件列舉。
+
+---
+
+### 5.5 `generated_data_sufficiency_notes`
+
+用途：標示資料完整度與需補充確認事項，避免 AI 過度推論。
+
+請輸出 2 到 5 點，內容包含：
+
+* 目前判斷中哪些屬於明確事實。
+* 哪些屬於合理推論。
+* 哪些關鍵資訊不足，需補充確認。
+* 哪些推論不應作為強排序依據。
+
+若資料充足，仍請簡短說明資料充足的原因。
+
+---
+
+## 6. 生成原則
+
+1. 不得新增候選顧問，不得直接建議分派給誰。
+2. 不得產生精確分數。
+3. 不得推翻部門池、水流、分派資格或候選池硬性規則。
+4. 不得把公司主檔或公開資訊不足的推論寫成既定事實；必要時用「初步判斷」、「需複核」、「資訊不足」標示。
+5. 不得只把 `job`、`duty`、`required_exp_note` 改寫成摘要。
+6. 必須說明「為什麼這不是泛用職務」或「為什麼不能只看表面職稱」。
+7. `assessment` 是判斷脈絡，給人看；`matching_guidance` 是匹配判斷提示，給 embedding、顧問能力包比對與 LLM reranking 使用。
+8. 匹配判斷要偏向顧問適配，不是候選人 JD checklist。
+9. 如果公司主檔不足，但有公開資訊補充，應使用公開資訊補充公司脈絡。
+10. 如果公司主檔與公開資訊都不足，請明確標示公司脈絡不足，並降低判斷強度。
+11. 若同一 `entrust_id` 有多個不重複職務，整包委託欄位必須綜合判斷，不可只是各職務摘要拼接。
+12. 若多職務之間職能差異大，請明確指出顧問需要的是跨職能理解，或此委託可能不宜只靠單一職務經驗判斷。
+13. 若多職務其實只是同一職務的重複列、流程流轉或部門重複，不得誤判為多職務委託。
+14. 合理推論可以使用，但必須有限度，且需能回扣到產業、公司脈絡、職務、職級或職務內容。
+15. 不可把低信心推論放入主要加權經驗，可放入需補充確認或輔助判斷。
+
+---
+
+## 7. 輸出格式
+
+請只輸出 JSON object，不要輸出額外說明文字。
+
+```json
+{
+  "prompt_version": "supervisor_decision_analysis_columns_prompt_v2",
+  "entrust_id": "string",
+  "entrust_job_structure": {
+    "distinct_job_count": "number",
+    "is_multi_job_entrust": "boolean",
+    "job_structure_summary": "string"
+  },
+  "rows": [
+    {
+      "input_row_index": 1,
+      "job_rn": "string_or_blank",
+      "job": "string",
+      "generated_company_single_job_assessment": "string",
+      "generated_single_job_matching_guidance": "string",
+      "generated_company_entrust_jobs_assessment": "string",
+      "generated_entrust_matching_guidance": "string",
+      "generated_data_sufficiency_notes": "string"
+    }
+  ]
+}
+```
+
+---
+
+## 8. 輸出品質檢查
+
+送出前請自我檢查：
+
+* `generated_company_single_job_assessment` 是否已合併職務本質與公司脈絡？
+* `generated_single_job_matching_guidance` 是否具有排序取捨意義，而不是單純列出顧問條件？
+* 多職務 `entrust_id` 的 `generated_company_entrust_jobs_assessment` 是否真的整合所有不重複職務？
+* 多職務 `entrust_id` 的 `generated_entrust_matching_guidance` 是否是整包顧問匹配判斷，而不是各職務摘要拼接？
+* 單職務 `entrust_id` 是否正確填入「同單一職務分析。」與「同單一職務匹配判斷提示。」？
+* 同一 `entrust_id` 的整包欄位是否一致？
+* 是否有標示資料不足、合理推論與不可作為強排序依據的內容？
+* 是否避免輸出追溯、mapping、row id、source row 等非分析欄位？
+* 是否避免把候選人 JD checklist 誤寫成顧問匹配條件？
+* 是否避免把低信心推論當成確定條件？</pre>
+</template>
+<template id="promptTipSupervisorDecisionExampleTemplate">
+  <div class="prompt-tip-source">範例：同一委託含兩個職務（對應 supervisor_decision_analysis_columns_prompt_v2）</div>
+  <pre class="prompt-tip-pre">產出範例：同一委託含兩個職務
+
+一、範例輸入情境
+
+同一個 entrust_id 底下有兩個不重複職務。
+
+公司脈絡
+公司為半導體設備商，提供晶圓製造相關設備與製程解決方案，客戶多為半導體製造廠。
+
+職務 1：製程工程主管
+負責設備導入後的製程參數調整、良率改善、跨部門工程協作與團隊管理。
+
+職務 2：設備維護工程師
+負責半導體設備安裝、維修、故障排除與客戶現場技術支援。
+
+Row 1：製程工程主管
+generated_company_single_job_assessment
+
+本職務放在半導體設備商脈絡下，核心不是泛用的工程主管，而是偏向製程參數優化、設備應用導入、良率改善與工程團隊管理的技術主管職。由於公司提供晶圓製造相關設備與製程解決方案，此職務需要理解設備在客戶製造現場的實際應用，而不只是一般半導體產業經驗。顧問理解此職務時，應抓住「製程／設備交會」、「客戶端導入場景」與「工程主管職」三個核心，而不能只看表面職稱為工程主管。
+
+generated_single_job_matching_guidance
+製程／設備應用經驗的重要性高於單純半導體產業經驗；若顧問只有泛半導體案件經驗，但缺乏製程參數、設備導入或良率改善脈絡，相關性應下修。
+若顧問沒有半導體設備商成交經驗，但具備晶圓廠製程工程主管、設備工程主管或製程改善相關案件經驗，仍可視為高度相關。
+工程主管職操作經驗應優先於一般工程師職缺經驗；若顧問過往多為基層工程師招募，但缺乏主管職人才辨識與說服經驗，應降低加權。
+近期有製程、設備、良率改善或客戶端工程支援相關候選人池的顧問，參考價值高於很久以前曾做過半導體產業案件但近期無相關操作紀錄的顧問。
+IC 設計、韌體研發或一般電子製造經驗雖同屬科技或半導體周邊，但若缺乏製程／設備應用脈絡，不能視為強相關。
+
+generated_company_entrust_jobs_assessment
+
+此整包委託不是單一職缺補人，而是半導體設備商圍繞設備導入、製程應用與客戶端技術支援所形成的技術職能補強。製程工程主管偏向製程改善與團隊管理，設備維護工程師偏向現場安裝、故障排除與客戶支援，兩者共同反映公司需要強化設備從導入、調校到維護服務的完整工程能力。顧問不能只看單一職稱，而應理解此委託背後是半導體設備應用場景下的多層次工程人才需求。
+
+generated_entrust_matching_guidance
+能同時理解製程工程與設備工程人才市場的顧問，應優先於只熟悉泛半導體產業但無設備／製程脈絡的顧問。
+若顧問過去操作過晶圓廠製程、設備維護、設備導入、FAE 或客戶端工程支援案件，可作為承接本整包委託的替代相關經驗。
+若顧問只熟悉其中一個職務，例如只做過設備維護工程師，但沒有製程主管或工程管理職經驗，對整包委託的覆蓋度應低於同時具備主管職與設備／製程案件經驗的顧問。
+製程／設備職務本質應高於半導體產業分類本身；若顧問只有 IC 設計、軟體研發或一般電子產業經驗，缺乏設備現場與製程應用場景，應降權。
+近期有半導體設備、晶圓廠製程、設備維護或客戶端工程支援候選人池的顧問，應優先於僅有久遠同產業成交紀錄的顧問。
+
+generated_data_sufficiency_notes
+
+目前可明確判斷公司屬半導體設備商，且本 row 職務為製程工程主管，職務內容包含製程參數調整、良率改善、跨部門工程協作與團隊管理。基於職務內容已明確提到製程參數與設備導入後調整，因此判斷此職務高度關聯製程／設備應用場景，信心程度高。候選人可能來自半導體設備商、晶圓廠製程工程或設備工程單位，此為中信心合理推論，仍需確認公司實際產品類型與候選人來源限制。另需補充確認此主管職實際管理人數、是否需客戶端駐點、是否偏售前導入或售後改善，這些會影響顧問經驗加權方向。
+
+Row 2：設備維護工程師
+generated_company_single_job_assessment
+
+本職務放在半導體設備商脈絡下，核心不是一般維修工程師，而是半導體設備安裝、故障排除、客戶現場技術支援與設備穩定運作相關的工程服務職。由於公司客戶多為半導體製造廠，此職務很可能涉及客戶端現場問題處理與設備維護效率，顧問不能只以一般設備維修或廠務維護經驗判斷，而應關注半導體設備、客戶端支援與高技術門檻設備服務經驗。
+
+generated_single_job_matching_guidance
+半導體設備維護、安裝與故障排除經驗的重要性高於一般機電維修或廠務維護經驗。
+若顧問沒有半導體設備商案件經驗，但具備晶圓廠設備工程、設備商 FAE、客服工程師或現場技術支援案件經驗，仍可視為高度相關。
+客戶端現場支援經驗應優先於純內部維修經驗；若顧問過往只操作一般工廠設備維修，但缺乏半導體客戶現場與高精密設備脈絡，相關性應下修。
+近期有設備工程師、FAE、Field Service Engineer 或半導體設備維護候選人池的顧問，參考價值高於久遠的泛科技產業成交經驗。
+若顧問只熟悉軟體、IC 設計或研發職缺，缺乏設備安裝、故障排除與現場支援人才市場經驗，不能視為強相關。
+
+generated_company_entrust_jobs_assessment
+
+此整包委託不是單一職缺補人，而是半導體設備商圍繞設備導入、製程應用與客戶端技術支援所形成的技術職能補強。製程工程主管偏向製程改善與團隊管理，設備維護工程師偏向現場安裝、故障排除與客戶支援，兩者共同反映公司需要強化設備從導入、調校到維護服務的完整工程能力。顧問不能只看單一職稱，而應理解此委託背後是半導體設備應用場景下的多層次工程人才需求。
+
+generated_entrust_matching_guidance
+能同時理解製程工程與設備工程人才市場的顧問，應優先於只熟悉泛半導體產業但無設備／製程脈絡的顧問。
+若顧問過去操作過晶圓廠製程、設備維護、設備導入、FAE 或客戶端工程支援案件，可作為承接本整包委託的替代相關經驗。
+若顧問只熟悉其中一個職務，例如只做過設備維護工程師，但沒有製程主管或工程管理職經驗，對整包委託的覆蓋度應低於同時具備主管職與設備／製程案件經驗的顧問。
+製程／設備職務本質應高於半導體產業分類本身；若顧問只有 IC 設計、軟體研發或一般電子產業經驗，缺乏設備現場與製程應用場景，應降權。
+近期有半導體設備、晶圓廠製程、設備維護或客戶端工程支援候選人池的顧問，應優先於僅有久遠同產業成交紀錄的顧問。
+
+generated_data_sufficiency_notes
+
+目前可明確判斷本 row 職務為設備維護工程師，職務內容包含設備安裝、維修、故障排除與客戶現場技術支援。基於職務內容已明確提到客戶現場技術支援，因此此職務與 Field Service Engineer、設備工程、客戶端工程支援人才市場高度相關，信心程度高。候選人可能來自半導體設備商、晶圓廠設備工程或高精密設備維護單位，此為中信心合理推論，仍需確認設備類型與是否需半導體製程知識。另需補充確認是否需要輪班、出差、駐廠、英文能力、特定設備品牌經驗，這些會影響顧問是否需要特定候選人池。</pre>
+</template>
 <div class="callout" spellcheck="false"><strong>資料來源說明：</strong>顧問能力包由系統從<strong>歷史案件資料庫、顧問主檔、推薦 / 成交紀錄與 workload</strong>萃取原始資料，再透過 <strong>LLM 分析整理</strong>成結構化格式。「LLM 分析」欄位表示由模型根據歷史資料推論產出，不直接來自系統原始欄位；若資料不足，需標示資料缺口、信心程度與待確認事項。Embedding 語料版（v2）由完整分析版萃取產生，不直接混入完整分析版欄位。</div>
 
 <!-- 第四層：候選顧問比較包 -->
@@ -3388,80 +4960,115 @@ generation_method = full_analysis_seeded_semantic_profile
 <h2 id="ch6" spellcheck="false">09 · LLM Reranking 決策框架規則</h2>
 <p spellcheck="false">判斷規則的目的，是避免 LLM 按照自己的直覺亂排。要明確告訴它：在獵才分案中，什麼情況該優先看什麼。</p>
 
-<div class="rule">
-  <div class="rule-num">RULE 01 · 硬規則</div>
-  <div class="rule-title" spellcheck="false">候選池限制不可推翻</div>
-  <ul>
-    <li>只能在本次提供的候選顧問名單內重新排序。</li>
-    <li>不得推薦候選名單外的顧問。</li>
-    <li>不得因顧問看起來適合，就忽略部門池、水流或分派資格限制。</li>
-    <li>若候選人資料不足，應標示「資料不足」，不得自行推測。</li>
-  </ul>
-  <p class="sub" spellcheck="false"><strong>本質：</strong>LLM reranking 不是全公司自由選人，而是在已經過部門池與分案資格篩選後，做最後排序。</p>
-</div>
-
-<div class="rule">
-  <div class="rule-num">RULE 02 · 案件本質</div>
-  <div class="rule-title" spellcheck="false">先判斷案件本質，再比較顧問</div>
-  <p spellcheck="false">排序前，請先判斷本案最重要的成功條件屬於哪一類：</p>
-  <div>
-    <span class="pill pill-blue">A. 產業經驗優先</span>
-    <span class="pill pill-blue">B. 職務／職能經驗優先</span>
-    <span class="pill pill-blue">C. 職級／高階主管經驗優先</span>
-    <span class="pill pill-blue">D. 客戶經營經驗優先</span>
-    <span class="pill pill-blue">E. 治理因素優先</span>
-    <span class="pill pill-blue">F. 混合型</span>
+<details class="rule rule-collapsible">
+  <summary class="rule-summary" aria-expanded="false">
+    <span>
+      <span class="rule-num" spellcheck="false">RULE 01 · 硬規則</span>
+      <span class="rule-title" spellcheck="false">候選池限制不可推翻</span>
+    </span>
+    <span class="rule-toggle-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="rule-content">
+    <ul>
+      <li spellcheck="false">只能在本次提供的候選顧問名單內重新排序。</li>
+      <li spellcheck="false">不得推薦候選名單外的顧問。</li>
+      <li spellcheck="false">不得因顧問看起來適合，就忽略部門池、水流或分派資格限制。</li>
+      <li spellcheck="false">若候選人資料不足，應標示「資料不足」，不得自行推測。</li>
+    </ul>
+    <p class="sub" spellcheck="false"><strong>本質：</strong>LLM reranking 不是全公司自由選人，而是在已經過部門池與分案資格篩選後，做最後排序。</p>
   </div>
-  <p class="sub" style="margin-top:10px;" spellcheck="false"><strong>應用到本範例：</strong>這不是單純的「半導體產業案」，而是「半導體設備 × 研發主管 × 技術管理」案。所以 B 顧問雖然總分略低，但若他有更強的研發主管經驗，就有機會被提升。</p>
-</div>
+</details>
 
-<div class="rule">
-  <div class="rule-num">RULE 03 · 分數使用</div>
-  <div class="rule-title" spellcheck="false">專業匹配優先於單一總分</div>
-  <ul>
-    <li>Baseline Score 是重要參考，但不是唯一依據。</li>
-    <li>若分數差距小於 5 分，允許根據案件本質調整排序。</li>
-    <li>若分數差距大於 10 分，除非有明確證據，否則不應大幅翻轉排序。</li>
-    <li>若要把低分顧問往前調，必須指出具體證據。</li>
-    <li>不得使用資料中不存在的理由調整排序。</li>
-  </ul>
-  <table style="margin-top:10px;">
-    <thead><tr><th style="width:65%" spellcheck="false">情境</th><th spellcheck="false">LLM 是否可調整</th></tr></thead>
-    <tbody>
-      <tr><td spellcheck="false">A 86 分，B 82 分，且 B 職務更貼近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
-      <tr><td spellcheck="false">A 92 分，B 65 分，只因 B 負載低</td><td spellcheck="false"><span class="pill pill-red">不應調整</span></td></tr>
-      <tr><td spellcheck="false">A 86 分但負載極高；B 84 分且經驗相近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
-      <tr><td spellcheck="false">A 分數最高，但資料顯示多為業務職，不是研發職</td><td spellcheck="false"><span class="pill pill-green">可以降一位</span></td></tr>
-    </tbody>
-  </table>
-</div>
+<details class="rule rule-collapsible">
+  <summary class="rule-summary" aria-expanded="false">
+    <span>
+      <span class="rule-num" spellcheck="false">RULE 02 · 案件本質</span>
+      <span class="rule-title" spellcheck="false">先判斷案件本質，再比較顧問</span>
+    </span>
+    <span class="rule-toggle-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="rule-content">
+    <p spellcheck="false">排序前，請先判斷本案最重要的成功條件屬於哪一類：</p>
+    <div>
+      <span class="pill pill-blue">A. 產業經驗優先</span>
+      <span class="pill pill-blue">B. 職務／職能經驗優先</span>
+      <span class="pill pill-blue">C. 職級／高階主管經驗優先</span>
+      <span class="pill pill-blue">D. 客戶經營經驗優先</span>
+      <span class="pill pill-blue">E. 治理因素優先</span>
+      <span class="pill pill-blue">F. 混合型</span>
+    </div>
+    <p class="sub" style="margin-top:10px;" spellcheck="false"><strong>應用到本範例：</strong>這不是單純的「半導體產業案」，而是「半導體設備 × 研發主管 × 技術管理」案。所以 B 顧問雖然總分略低，但若他有更強的研發主管經驗，就有機會被提升。</p>
+  </div>
+</details>
 
-<div class="rule">
-  <div class="rule-num">RULE 04 · 治理因素</div>
-  <div class="rule-title" spellcheck="false">治理因素只能在「專業差距不大」時介入</div>
-  <p spellcheck="false">治理因素包括：顧問 loading、近期是否缺案、業績缺口、近期分派頻率、是否需要培養新顧問、部門水流平衡需求。</p>
-  <ul>
-    <li>當兩位顧問專業匹配差距不大時，可以用負載、缺案、業績平衡調整排序。</li>
-    <li>若某顧問專業明顯不符，不得只因負載低而排到前面。</li>
-    <li>若某顧問負載明顯過高，即使專業分數高，也可降一位，但需保留在推薦名單中。</li>
-    <li>若案件為高價值或高難度案，專業匹配優先於補案需求。</li>
-    <li>若案件為一般難度，治理因素可提高權重。</li>
-  </ul>
-  <div class="callout" style="margin-top:10px;" spellcheck="false"><strong>主管會認同的邏輯：</strong>專業差距大時，看專業；專業差距小時，看治理。比單純把 loading 加權進公式更貼近主管實際判斷。</div>
-</div>
+<details class="rule rule-collapsible">
+  <summary class="rule-summary" aria-expanded="false">
+    <span>
+      <span class="rule-num" spellcheck="false">RULE 03 · 分數使用</span>
+      <span class="rule-title" spellcheck="false">專業匹配優先於單一總分</span>
+    </span>
+    <span class="rule-toggle-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="rule-content">
+    <ul>
+      <li spellcheck="false">Baseline Score 是重要參考，但不是唯一依據。</li>
+      <li spellcheck="false">若分數差距小於 5 分，允許根據案件本質調整排序。</li>
+      <li spellcheck="false">若分數差距大於 10 分，除非有明確證據，否則不應大幅翻轉排序。</li>
+      <li spellcheck="false">若要把低分顧問往前調，必須指出具體證據。</li>
+      <li spellcheck="false">不得使用資料中不存在的理由調整排序。</li>
+    </ul>
+    <table style="margin-top:10px;">
+      <thead><tr><th style="width:65%" spellcheck="false">情境</th><th spellcheck="false">LLM 是否可調整</th></tr></thead>
+      <tbody>
+        <tr><td spellcheck="false">A 86 分，B 82 分，且 B 職務更貼近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
+        <tr><td spellcheck="false">A 92 分，B 65 分，只因 B 負載低</td><td spellcheck="false"><span class="pill pill-red">不應調整</span></td></tr>
+        <tr><td spellcheck="false">A 86 分但負載極高；B 84 分且經驗相近</td><td spellcheck="false"><span class="pill pill-green">可以調整</span></td></tr>
+        <tr><td spellcheck="false">A 分數最高，但資料顯示多為業務職，不是研發職</td><td spellcheck="false"><span class="pill pill-green">可以降一位</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</details>
 
-<div class="rule">
-  <div class="rule-num">RULE 05 · 輸出格式</div>
-  <div class="rule-title" spellcheck="false">每次調整都要說明「調整原因」</div>
-  <p spellcheck="false">LLM reranking 最大價值不是只排出新順序，而是<strong>留下決策理由</strong>。請輸出：</p>
-  <ol>
-    <li>最終 Top 3～5 排序</li>
-    <li>每位顧問推薦理由</li>
-    <li>若排序與初步分數不同，請說明調整原因</li>
-    <li>每位顧問的主要風險</li>
-    <li>是否有資料不足或需主管確認的地方</li>
-  </ol>
-</div>
+<details class="rule rule-collapsible">
+  <summary class="rule-summary" aria-expanded="false">
+    <span>
+      <span class="rule-num" spellcheck="false">RULE 04 · 治理因素</span>
+      <span class="rule-title" spellcheck="false">治理因素只能在「專業差距不大」時介入</span>
+    </span>
+    <span class="rule-toggle-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="rule-content">
+    <p spellcheck="false">治理因素包括：顧問 loading、近期是否缺案、業績缺口、近期分派頻率、是否需要培養新顧問、部門水流平衡需求。</p>
+    <ul>
+      <li spellcheck="false">當兩位顧問專業匹配差距不大時，可以用負載、缺案、業績平衡調整排序。</li>
+      <li spellcheck="false">若某顧問專業明顯不符，不得只因負載低而排到前面。</li>
+      <li spellcheck="false">若某顧問負載明顯過高，即使專業分數高，也可降一位，但需保留在推薦名單中。</li>
+      <li spellcheck="false">若案件為高價值或高難度案，專業匹配優先於補案需求。</li>
+      <li spellcheck="false">若案件為一般難度，治理因素可提高權重。</li>
+    </ul>
+    <div class="callout" style="margin-top:10px;" spellcheck="false"><strong>主管會認同的邏輯：</strong>專業差距大時，看專業；專業差距小時，看治理。比單純把 loading 加權進公式更貼近主管實際判斷。</div>
+  </div>
+</details>
+
+<details class="rule rule-collapsible">
+  <summary class="rule-summary" aria-expanded="false">
+    <span>
+      <span class="rule-num" spellcheck="false">RULE 05 · 輸出格式</span>
+      <span class="rule-title" spellcheck="false">每次調整都要說明「調整原因」</span>
+    </span>
+    <span class="rule-toggle-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="rule-content">
+    <p spellcheck="false">LLM reranking 最大價值不是只排出新順序，而是<strong>留下決策理由</strong>。請輸出：</p>
+    <ol>
+      <li spellcheck="false">最終 Top 3～5 排序</li>
+      <li spellcheck="false">每位顧問推薦理由</li>
+      <li spellcheck="false">若排序與初步分數不同，請說明調整原因</li>
+      <li spellcheck="false">每位顧問的主要風險</li>
+      <li spellcheck="false">是否有資料不足或需主管確認的地方</li>
+    </ol>
+  </div>
+</details>
 
 <!-- 完整 Prompt 範本 -->
 <h2 id="ch7" spellcheck="false">10 · 完整 LLM Reranking Prompt 範本</h2>
@@ -3726,7 +5333,7 @@ C 顧問負載低，但主管職與研發管理證據不足，
   <button onclick="e_fmt(event,'italic')"><i>I</i></button>
 </div>
 <div id="edit-notice" style="display: none;">✏️ 編輯模式已開啟 — 點擊任意文字即可修改，完成後按右側「💾 另存新檔」</div>
-<div id="hl-draft" style="left: 329px; top: 10202px; width: 1112px; height: 1245px; display: none;"></div>
+<div id="hl-draft" style="left: 61px; top: 1547px; width: 21px; height: 20px; display: none;"></div>
 
 <script>
   (() => {
@@ -3767,6 +5374,175 @@ C 顧問負載低，但主管職與研發管理證據不足，
   })();
 
   (() => {
+    function syncRuleSummary(rule) {
+      const summary = rule.querySelector('.rule-summary');
+      if (!summary) return;
+      summary.setAttribute('aria-expanded', String(rule.open));
+    }
+
+    function toggleRuleSummary(summary) {
+      const rule = summary.closest('details.rule-collapsible');
+      if (!rule) return;
+      const previousState = summary.dataset.ruleWasOpen;
+      rule.open = previousState ? previousState !== 'true' : !rule.open;
+      delete summary.dataset.ruleWasOpen;
+      syncRuleSummary(rule);
+    }
+
+    document.querySelectorAll('details.rule-collapsible').forEach(syncRuleSummary);
+
+    document.addEventListener('mousedown', (event) => {
+      const summary = event.target.closest('.rule-summary');
+      const rule = summary && summary.closest('details.rule-collapsible');
+      if (!rule) return;
+      summary.dataset.ruleWasOpen = String(rule.open);
+    });
+
+    document.addEventListener('click', (event) => {
+      const summary = event.target.closest('.rule-summary');
+      if (!summary) return;
+      event.preventDefault();
+      toggleRuleSummary(summary);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const summary = event.target.closest('.rule-summary');
+      if (!summary) return;
+      event.preventDefault();
+      toggleRuleSummary(summary);
+    });
+  })();
+
+  function setPipelineFlow(group, key, shouldFocus) {
+    if (!group) return;
+    const tabs = Array.from(group.querySelectorAll('[data-pipeline-tab]'));
+    const panels = Array.from(group.querySelectorAll('[data-pipeline-panel]'));
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.pipelineTab === key;
+      tab.setAttribute('aria-selected', String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+      if (isActive && shouldFocus) tab.focus();
+    });
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.pipelinePanel !== key;
+    });
+  }
+
+  function switchPipelineFlow(event, key) {
+    if (event) event.preventDefault();
+    const group = event && event.currentTarget
+      ? event.currentTarget.closest('[data-pipeline-tabs]')
+      : document.querySelector('[data-pipeline-tabs]');
+    setPipelineFlow(group, key, false);
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', key === 'gar' ? '#pipeline-gar' : '#pipeline');
+    }
+  }
+
+  function openGarConcept() {
+    const modal = document.getElementById('gar-modal');
+    if (!modal) return;
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.hidden = false;
+    document.body.classList.add('gar-modal-open');
+    const closeBtn = modal.querySelector('.gar-modal-close');
+    if (closeBtn) closeBtn.focus();
+  }
+  function closeGarConcept() {
+    const modal = document.getElementById('gar-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('gar-modal-open');
+    const trigger = document.querySelector('.gar-concept-trigger');
+    if (trigger) trigger.focus();
+  }
+  function openEmbeddingConcept() {
+    const modal = document.getElementById('embedding-modal');
+    if (!modal) return;
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.hidden = false;
+    document.body.classList.add('gar-modal-open');
+    const iframe = document.getElementById('embedding-modal-report');
+    if (iframe && !iframe.src && iframe.dataset.src) {
+      iframe.addEventListener('load', () => {
+        try {
+          const doc = iframe.contentDocument;
+          if (doc && doc.body) {
+            const fit = () => { iframe.style.height = doc.body.scrollHeight + 'px'; };
+            fit();
+            setTimeout(fit, 250);
+            setTimeout(fit, 800);
+            if (doc.defaultView) doc.defaultView.addEventListener('resize', fit);
+          }
+        } catch (_) { /* same-origin only; fallback to css height */ }
+      }, { once: true });
+      iframe.src = iframe.dataset.src;
+    }
+    const dialog = modal.querySelector('.gar-modal-dialog');
+    if (dialog) dialog.scrollTop = 0;
+    const closeBtn = modal.querySelector('.gar-modal-close');
+    if (closeBtn) closeBtn.focus();
+  }
+  function closeEmbeddingConcept() {
+    const modal = document.getElementById('embedding-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('gar-modal-open');
+    const trigger = document.getElementById('pipeline-tab-embedding');
+    if (trigger) trigger.focus();
+  }
+  function openVersionConcept() {
+    const modal = document.getElementById('version-modal');
+    if (!modal) return;
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.hidden = false;
+    document.body.classList.add('gar-modal-open');
+    const dialog = modal.querySelector('.gar-modal-dialog');
+    if (dialog) dialog.scrollTop = 0;
+    const closeBtn = modal.querySelector('.gar-modal-close');
+    if (closeBtn) closeBtn.focus();
+  }
+  function closeVersionConcept() {
+    const modal = document.getElementById('version-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('gar-modal-open');
+    const trigger = document.getElementById('pipeline-tab-version');
+    if (trigger) trigger.focus();
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const garModal = document.getElementById('gar-modal');
+      if (garModal && !garModal.hidden) { closeGarConcept(); return; }
+      const embeddingModal = document.getElementById('embedding-modal');
+      if (embeddingModal && !embeddingModal.hidden) { closeEmbeddingConcept(); return; }
+      const versionModal = document.getElementById('version-modal');
+      if (versionModal && !versionModal.hidden) closeVersionConcept();
+    }
+  });
+
+  (() => {
+    document.querySelectorAll('[data-pipeline-tabs]').forEach((group) => {
+      const tabs = Array.from(group.querySelectorAll('[data-pipeline-tab]'));
+      const panels = Array.from(group.querySelectorAll('[data-pipeline-panel]'));
+      if (!tabs.length || !panels.length) return;
+      const initialKey = window.location.hash === '#pipeline-gar' ? 'gar' : 'current';
+      setPipelineFlow(group, initialKey, false);
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          const direction = event.key === 'ArrowRight' ? 1 : -1;
+          const nextIndex = (index + direction + tabs.length) % tabs.length;
+          setPipelineFlow(group, tabs[nextIndex].dataset.pipelineTab, true);
+        });
+      });
+    });
+  })();
+
+  (() => {
     const promptTips = {
       full: {
         title: '完整分析版 Prompt',
@@ -3775,6 +5551,14 @@ C 顧問負載低，但主管職與研發管理證據不足，
       embedding: {
         title: 'Embedding 語料版 Prompt',
         template: 'promptTipEmbeddingTemplate'
+      },
+      supervisorDecision: {
+        title: 'Supervisor Decision Analysis Columns Prompt v2',
+        template: 'promptTipSupervisorDecisionTemplate'
+      },
+      supervisorDecisionExample: {
+        title: '產出範例：同一委託含兩個職務',
+        template: 'promptTipSupervisorDecisionExampleTemplate'
       }
     };
     const modal = document.querySelector('[data-prompt-tip-modal]');
@@ -4076,8 +5860,8 @@ C 顧問負載低，但主管職與研發管理證據不足，
     document.querySelectorAll(
       'h1, h2, h3, h4, .tag, .lead,' +
       '.container > p, section p, .quote, .arch-io-title, .arch-io-group,' +
-      '.arch-title, .arch-pill, .arch-body, .callout, td, th, pre, .pf-text,' +
-      '.flow-title, .flow-desc, .rule-title, .rule > p, .tldr .label,' +
+      '.arch-title, .arch-pill, .arch-body, .callout, td, th, pre, .pf-text, .ph-name, .ph-tag,' +
+      '.flow-title, .flow-desc, .rule-num, .rule-title, .rule-content p, .rule-content li, .tldr .label,' +
       '.col-label, .sub, .why-col h4, .why-col p, .why-col li,' +
       '.score-note, .principle p, .io-col h3, .consult-name, .consult-val, .consult-label,' +
       '.consult-rank, .consult-section-title, .consult-sub-label, .consult-sub-val,' +
@@ -4174,7 +5958,7 @@ C 顧問負載低，但主管職與研發管理證據不足，
 
 
 
-<div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 1009px; top: 3047px;"><div class="note-popup" style="width: 428px; height: 398px;"><div class="note-text" contenteditable="true"><span style="letter-spacing: 0.16px;">------------------------------------------------------------------------</span>
+<div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 808px; top: 3908px;"><div class="note-popup" style="width: 428px; height: 398px;"><div class="note-text" contenteditable="true"><span style="letter-spacing: 0.16px;">------------------------------------------------------------------------</span>
 先讓 LLM 協助做「成功條件假說萃取」，再人為將框架收斂
 ------------------------------------------------------------------------
 
@@ -4188,6 +5972,12 @@ LLM 逐案判讀：本案可能看重哪些成功條件？
         ↓
 形成第一版成功條件框架
         ↓
-再用命中率、主管回饋、成交結果修正</div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div><div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 1042px; top: 3046px;"><div class="note-popup" style="width: 802px; height: 559px;"><div class="note-text" contenteditable="true"><h3 nodeid="be83ccf9-8db5-45e6-a24b-f9530bdea581" draggable="false" data-pm-slice="1 2 []" data-en-clipboard="true" spellcheck="false">1. 從 JD 文字中抽取候選成功條件</h3><div draggable="false">LLM 先不要直接判斷誰最適合，而是先列出可能影響成功的條件。</div><div draggable="false">例如輸入：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">職缺：海外業務總監</div><div data-plaintext="true">產業：醫療器材</div><div data-plaintext="true">JD：需負責歐洲代理商開發、醫療通路管理、跨國團隊協作，</div><div data-plaintext="true">並具備 MDR / CE 法規理解。</div></div><div draggable="false"><br></div><div draggable="false">LLM 可能輸出：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">候選成功條件：</div><div data-plaintext="true">1. 醫療器材產業經驗</div><div data-plaintext="true">2. 海外業務 / 通路開發經驗</div><div data-plaintext="true">3. 歐洲市場或代理商管理經驗</div><div data-plaintext="true">4. 法規敏感產業理解</div><div data-plaintext="true">5. 高階業務主管人才操作經驗</div></div><div draggable="false">「生成可能條件」，不是最後結論。</div><h3 nodeid="cba30963-7537-4097-8e78-611311786003" draggable="false" spellcheck="false">2. 判斷每個成功條件的相對重要性</h3><div draggable="false">接著 LLM 根據 JD 線索給出權重判斷。</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件推測：</div><div data-plaintext="true">- 海外業務 / 通路開發經驗：高</div><div data-plaintext="true">- 醫療器材產業經驗：高</div><div data-plaintext="true">- 歐洲市場經驗：中高</div><div data-plaintext="true">- 法規理解：中</div><div data-plaintext="true">- 純高階主管操作經驗：中</div><div data-plaintext="true"><br></div><div data-plaintext="true">理由：</div><div data-plaintext="true">JD 中核心任務集中在歐洲代理商開發與醫療通路管理，</div><div data-plaintext="true">因此不能只看醫療器材產業，也要看海外業務拓展經驗。</div></div><div draggable="false">LLM 根據資料判斷，而不是完全依賴人事先定好的模板。</div><h3 nodeid="c04c7a9b-fc8f-4cb0-a9eb-c46a4f8a1b95" draggable="false" spellcheck="false">3. 對照歷史相似案件找模式</h3><div draggable="false">如果資料包裡提供歷史相似案例，LLM 可以進一步觀察：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">歷史相似案件中：</div><div data-plaintext="true">- 成功分案多由具備海外業務 / 醫療器材經驗的顧問承接</div><div data-plaintext="true">- 單純做過醫療器材但缺少海外業務經驗的顧問，推薦成功率較低</div><div data-plaintext="true">- 曾做過歐洲市場或代理商職缺的顧問，主管實際採納率較高</div></div><div draggable="false">這一步就開始接近「資料導向」判斷。</div><div draggable="false">LLM 只是閱讀與歸納。如果要更嚴謹，這些結論應該由 SQL / Python / 統計模型先算出來，再交給 LLM 解讀。</div><h3 nodeid="34c3f88f-f35b-4c86-b0af-da2d03cfbca4" draggable="false" spellcheck="false">4. 產出「成功條件假設」，而不是直接產出真理</h3><div draggable="false">LLM 輸出時使用這種格式：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件假設：</div><div data-plaintext="true">1. 海外業務 / 通路開發經驗應為第一優先</div><div data-plaintext="true">2. 醫療器材產業經驗為第二優先</div><div data-plaintext="true">3. 法規理解是加分條件，但不應單獨主導排序</div><div data-plaintext="true"><br></div><div data-plaintext="true">信心程度：中高</div><div data-plaintext="true"><br></div><div data-plaintext="true">需要驗證：</div><div data-plaintext="true">- 歷史醫療器材海外業務案中，主管實際選擇的顧問是否集中在海外業務經驗強者？</div><div data-plaintext="true">- 成交或推薦成功案例是否也支持這個判斷？</div></div></div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div>
+再用命中率、主管回饋、成交結果修正</div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div><div class="note-marker" data-note-id="note-1" onclick="if(this.dataset.justDragged)return;if(!event.target.closest('.note-popup'))this.classList.toggle('open');" style="left: 842px; top: 3907px;"><div class="note-popup" style="width: 802px; height: 559px;"><div class="note-text" contenteditable="true"><h3 nodeid="be83ccf9-8db5-45e6-a24b-f9530bdea581" draggable="false" data-pm-slice="1 2 []" data-en-clipboard="true" spellcheck="false">1. 從 JD 文字中抽取候選成功條件</h3><div draggable="false">LLM 先不要直接判斷誰最適合，而是先列出可能影響成功的條件。</div><div draggable="false">例如輸入：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">職缺：海外業務總監</div><div data-plaintext="true">產業：醫療器材</div><div data-plaintext="true">JD：需負責歐洲代理商開發、醫療通路管理、跨國團隊協作，</div><div data-plaintext="true">並具備 MDR / CE 法規理解。</div></div><div draggable="false"><br></div><div draggable="false">LLM 可能輸出：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">候選成功條件：</div><div data-plaintext="true">1. 醫療器材產業經驗</div><div data-plaintext="true">2. 海外業務 / 通路開發經驗</div><div data-plaintext="true">3. 歐洲市場或代理商管理經驗</div><div data-plaintext="true">4. 法規敏感產業理解</div><div data-plaintext="true">5. 高階業務主管人才操作經驗</div></div><div draggable="false">「生成可能條件」，不是最後結論。</div><h3 nodeid="cba30963-7537-4097-8e78-611311786003" draggable="false" spellcheck="false">2. 判斷每個成功條件的相對重要性</h3><div draggable="false">接著 LLM 根據 JD 線索給出權重判斷。</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件推測：</div><div data-plaintext="true">- 海外業務 / 通路開發經驗：高</div><div data-plaintext="true">- 醫療器材產業經驗：高</div><div data-plaintext="true">- 歐洲市場經驗：中高</div><div data-plaintext="true">- 法規理解：中</div><div data-plaintext="true">- 純高階主管操作經驗：中</div><div data-plaintext="true"><br></div><div data-plaintext="true">理由：</div><div data-plaintext="true">JD 中核心任務集中在歐洲代理商開發與醫療通路管理，</div><div data-plaintext="true">因此不能只看醫療器材產業，也要看海外業務拓展經驗。</div></div><div draggable="false">LLM 根據資料判斷，而不是完全依賴人事先定好的模板。</div><h3 nodeid="c04c7a9b-fc8f-4cb0-a9eb-c46a4f8a1b95" draggable="false" spellcheck="false">3. 對照歷史相似案件找模式</h3><div draggable="false">如果資料包裡提供歷史相似案例，LLM 可以進一步觀察：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">歷史相似案件中：</div><div data-plaintext="true">- 成功分案多由具備海外業務 / 醫療器材經驗的顧問承接</div><div data-plaintext="true">- 單純做過醫療器材但缺少海外業務經驗的顧問，推薦成功率較低</div><div data-plaintext="true">- 曾做過歐洲市場或代理商職缺的顧問，主管實際採納率較高</div></div><div draggable="false">這一步就開始接近「資料導向」判斷。</div><div draggable="false">LLM 只是閱讀與歸納。如果要更嚴謹，這些結論應該由 SQL / Python / 統計模型先算出來，再交給 LLM 解讀。</div><h3 nodeid="34c3f88f-f35b-4c86-b0af-da2d03cfbca4" draggable="false" spellcheck="false">4. 產出「成功條件假設」，而不是直接產出真理</h3><div draggable="false">LLM 輸出時使用這種格式：</div><div data-codeblock="true" data-line-wrapping="false" style="padding: 8px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);"><div data-plaintext="true">本案成功條件假設：</div><div data-plaintext="true">1. 海外業務 / 通路開發經驗應為第一優先</div><div data-plaintext="true">2. 醫療器材產業經驗為第二優先</div><div data-plaintext="true">3. 法規理解是加分條件，但不應單獨主導排序</div><div data-plaintext="true"><br></div><div data-plaintext="true">信心程度：中高</div><div data-plaintext="true"><br></div><div data-plaintext="true">需要驗證：</div><div data-plaintext="true">- 歷史醫療器材海外業務案中，主管實際選擇的顧問是否集中在海外業務經驗強者？</div><div data-plaintext="true">- 成交或推薦成功案例是否也支持這個判斷？</div></div></div><div class="note-actions"><button class="note-btn" onclick="this.closest('.note-marker').classList.remove('open')">完成</button><button class="note-btn delete" onclick="if(confirm('刪除此 Note？'))this.closest('.note-marker').remove()">🗑️ 刪除</button></div></div></div>
+
+
+
+
+
+
 
 </body></html>
