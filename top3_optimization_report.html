@@ -1,0 +1,1656 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Top3 命中率優化實驗紀錄</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #fff;
+      --text: #17202a;
+      --muted: #647084;
+      --border: #d9dee7;
+      --accent: #2563eb;
+      --good: #0f7b45;
+      --bad: #b42318;
+      --warn: #9a5b00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    header { margin-bottom: 18px; }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: 0; }
+    h2, h3 { margin-top: 0; letter-spacing: 0; }
+    .meta { color: var(--muted); font-size: 14px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .kpi-card span { display: block; color: var(--muted); font-size: 13px; }
+    .kpi-card strong { display: block; font-size: 30px; margin: 4px 0; }
+    .kpi-card em { display: block; color: var(--muted); font-style: normal; font-size: 13px; }
+    .definition-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .definition-grid strong { display: block; margin-bottom: 6px; }
+    .pool-card { margin-top: 12px; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      margin-top: 18px;
+    }
+    .tab-button {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      background: transparent;
+      padding: 10px 12px;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      font: inherit;
+    }
+    .tab-button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+    .tab-panel { display: none; padding-top: 16px; }
+    .tab-panel.active { display: block; }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .status { display: inline-block; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); margin-top: 12px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; font-size: 13px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .neutral { color: var(--muted); }
+    .note { border-left: 4px solid var(--warn); background: #fff8eb; padding: 12px; margin: 14px 0; }
+    @media (max-width: 900px) {
+      main { padding: 14px; }
+      .panel-grid, .two-col { grid-template-columns: 1fr; }
+      .num { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Top3 命中率優化實驗紀錄</h1>
+    <div class="meta">產出時間：2026-06-10T10:10:06｜主 KPI：委託包層級 Top3 evaluated hit rate｜目標：70%</div>
+  </header>
+  <section class="summary">
+    <article class="card kpi-card"><span>目前基準 Top3</span><strong>48.14%</strong><em>同公司歷史案件排除、完整候選池</em></article>
+    <article class="card kpi-card"><span>目前最佳 evaluated 方案</span><strong>66.58%</strong><em>方案 11: Dense 硬切單課候選池 + 主專長 + 時間序 prior</em></article>
+    <article class="card kpi-card"><span>距離 70%</span><strong>3.42pp</strong><em>仍未達標，需下一輪資料/模型升級</em></article>
+  </section>
+  <div class="note">本報表保留同公司歷史案件排除，不使用 LLM 產生分數，也不把主管實際顧問放進 query。不同方案同時列 evaluated 與 all-groups，避免用縮小候選池造成的不可評估案件美化成效。</div>
+  <div class="note">用詞提醒：完整候選池方案中的「dept + division 歷史課別偏好 prior」只是軟性加分，不會縮小候選池；只有「dept + division 硬切單課候選池」才會把另一課顧問排除。</div>
+  <section class="definition-grid">
+    <article class="card">
+      <strong>Top3 evaluated 是什麼？</strong>
+      <p>只看「可以公平評估」的委託包：主管實際指派的顧問必須在 current 顧問資料中，也必須還在該方案的候選池裡。分母會排除缺資料或被候選池規則排掉的委託包。</p>
+    </article>
+    <article class="card">
+      <strong>Top3 all groups 是什麼？</strong>
+      <p>用全部 866 個委託包當分母，包含 not evaluated。這比較保守，適合檢查候選池是否太窄；如果 evaluated 很高但 all groups 沒跟上，代表方案可能把一些主管實際選擇排掉了。</p>
+    </article>
+    <article class="card">
+      <strong>候選池人數怎麼看？</strong>
+      <p>這裡列的是每個方案在 evaluated 委託包中的候選顧問人數。完整候選池通常是 11、14、15 人；硬切單課候選池通常較小，所以 Top3 會比較容易命中，但也比較容易排掉真實主管選擇。</p>
+    </article>
+  </section>
+  <section class="card">
+    <h2>Evaluated / Not Evaluated 例子</h2>
+    <div class="definition-grid">
+      <article class="card">
+        <strong>可以評估，也有命中：委託 535</strong>
+        <p>台灣農林股份有限公司，職缺含茶廠主管、研發主管、通路銷售業務主管。完整候選池是業務一課 / 業務二課，主管實際選的是李育甄，李育甄也在候選池與 current 顧問資料中，所以可以算排名。這案在 baseline 排第 1 名，因此算 Top3 evaluated 命中。</p>
+      </article>
+      <article class="card">
+        <strong>硬切單課方案不能評估：委託 513</strong>
+        <p>全鋒汽車股份有限公司，職缺是軟體程式工程師。完整候選池原本是業務三課 / 業務四課，主管實際選劉宸希（業務四課），完整候選池下可評估且排第 2 名。但硬切單課方案因部門與分工產業切成業務三課，劉宸希被排出候選池，所以在方案 3/4/5 變成 not evaluated。這就是「硬切單課規則排掉實際主管選擇」的意思。</p>
+      </article>
+      <article class="card">
+        <strong>完整候選池也不能評估：委託 a_588</strong>
+        <p>翊傑科技股份有限公司，職缺是 Sales。主管實際選張穎采，但張穎采不在這次 current 40 位顧問能力資料中，所以系統無法替她算排名。這種案子不適合放進 Top3 evaluated 的分母，否則不是模型排序錯，而是資料範圍沒有包含實際答案。</p>
+      </article>
+    </div>
+  </section>
+  <section class="card">
+    <h2>方案總表</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>方案</th><th>類型</th><th class="num">Top1 evaluated</th><th class="num">Top1 all</th><th class="num">Top3 evaluated</th><th class="num">vs baseline</th><th class="num">Top3 all</th><th class="num">Top5 evaluated</th><th class="num">Top5 all</th><th>候選池人數</th><th class="num">Evaluated</th><th class="num">Not eval</th></tr></thead>
+        <tbody>
+      <tr>
+        <td>Baseline: 完整候選池 + Top5-history</td>
+        <td>candidate</td>
+        <td class="num">25.99%</td>
+        <td class="num">25.75%</td>
+        <td class="num">48.14%</td>
+        <td class="num neutral">+0.00pp</td>
+        <td class="num">47.69%</td>
+        <td class="num">64.69%</td>
+        <td class="num">64.09%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 1: 完整候選池 + aggregate 40%</td>
+        <td>candidate</td>
+        <td class="num">30.07%</td>
+        <td class="num">29.79%</td>
+        <td class="num">52.68%</td>
+        <td class="num good">+4.55pp</td>
+        <td class="num">52.19%</td>
+        <td class="num">66.90%</td>
+        <td class="num">66.28%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 2: 完整候選池 + aggregate 80% + 時間序 prior</td>
+        <td>candidate</td>
+        <td class="num">34.85%</td>
+        <td class="num">34.53%</td>
+        <td class="num">56.99%</td>
+        <td class="num good">+8.86pp</td>
+        <td class="num">56.47%</td>
+        <td class="num">70.05%</td>
+        <td class="num">69.40%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 3: dept + division 硬切單課候選池</td>
+        <td>candidate</td>
+        <td class="num">31.71%</td>
+        <td class="num">27.83%</td>
+        <td class="num">59.34%</td>
+        <td class="num good">+11.21pp</td>
+        <td class="num">52.08%</td>
+        <td class="num">79.61%</td>
+        <td class="num">69.86%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 4: 硬切單課候選池 + aggregate 80%</td>
+        <td>candidate</td>
+        <td class="num">38.82%</td>
+        <td class="num">34.06%</td>
+        <td class="num">65.13%</td>
+        <td class="num good">+17.00pp</td>
+        <td class="num">57.16%</td>
+        <td class="num">81.58%</td>
+        <td class="num">71.59%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 5: 硬切單課候選池 + aggregate 80% + 時間序 prior</td>
+        <td>candidate</td>
+        <td class="num">40.26%</td>
+        <td class="num">35.33%</td>
+        <td class="num">65.66%</td>
+        <td class="num good">+17.52pp</td>
+        <td class="num">57.62%</td>
+        <td class="num">81.58%</td>
+        <td class="num">71.59%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>診斷: 主管實際課別 oracle</td>
+        <td>diagnostic</td>
+        <td class="num">36.13%</td>
+        <td class="num">35.80%</td>
+        <td class="num">63.29%</td>
+        <td class="num good">+15.15pp</td>
+        <td class="num">62.70%</td>
+        <td class="num">79.95%</td>
+        <td class="num">79.21%</td>
+        <td>平均 7.17 人；範圍 5–8 人；5人:76組、6人:169組、7人:143組、8人:470組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>未完成: BM25 lexical index</td>
+        <td>next</td>
+        <td class="num">0.00%</td>
+        <td class="num">0.00%</td>
+        <td class="num">0.00%</td>
+        <td class="num bad">-48.14pp</td>
+        <td class="num">0.00%</td>
+        <td class="num">0.00%</td>
+        <td class="num">0.00%</td>
+        <td>未完成 / 不適用</td>
+        <td class="num">0</td>
+        <td class="num">866</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 6: 完整候選池: 主專長一致性 guardrail</td>
+        <td>candidate</td>
+        <td class="num">28.09%</td>
+        <td class="num">27.83%</td>
+        <td class="num">49.30%</td>
+        <td class="num good">+1.17pp</td>
+        <td class="num">48.85%</td>
+        <td class="num">66.20%</td>
+        <td class="num">65.59%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 6: 完整候選池: 主專長一致性 + aggregate 最佳權重</td>
+        <td>candidate</td>
+        <td class="num">31.47%</td>
+        <td class="num">31.18%</td>
+        <td class="num">54.31%</td>
+        <td class="num good">+6.18pp</td>
+        <td class="num">53.81%</td>
+        <td class="num">67.48%</td>
+        <td class="num">66.86%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 7: dept + division 硬切單課候選池: 主專長一致性 guardrail</td>
+        <td>candidate</td>
+        <td class="num">34.87%</td>
+        <td class="num">30.60%</td>
+        <td class="num">60.26%</td>
+        <td class="num good">+12.13pp</td>
+        <td class="num">52.89%</td>
+        <td class="num">80.66%</td>
+        <td class="num">70.79%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 7: dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</td>
+        <td>candidate</td>
+        <td class="num">38.42%</td>
+        <td class="num">33.72%</td>
+        <td class="num">65.00%</td>
+        <td class="num good">+16.86pp</td>
+        <td class="num">57.04%</td>
+        <td class="num">81.45%</td>
+        <td class="num">71.48%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 8: Dense 完整候選池: 主專長一致性 guardrail</td>
+        <td>candidate</td>
+        <td class="num">29.84%</td>
+        <td class="num">29.56%</td>
+        <td class="num">53.85%</td>
+        <td class="num good">+5.71pp</td>
+        <td class="num">53.35%</td>
+        <td class="num">72.49%</td>
+        <td class="num">71.82%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 8: Dense 完整候選池: 主專長一致性 + aggregate 最佳權重</td>
+        <td>candidate</td>
+        <td class="num">29.84%</td>
+        <td class="num">29.56%</td>
+        <td class="num">53.85%</td>
+        <td class="num good">+5.71pp</td>
+        <td class="num">53.35%</td>
+        <td class="num">72.49%</td>
+        <td class="num">71.82%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 9: Dense 完整候選池 + 主專長 + 時間序 prior</td>
+        <td>candidate</td>
+        <td class="num">34.38%</td>
+        <td class="num">34.06%</td>
+        <td class="num">58.39%</td>
+        <td class="num good">+10.26pp</td>
+        <td class="num">57.85%</td>
+        <td class="num">75.17%</td>
+        <td class="num">74.48%</td>
+        <td>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</td>
+        <td class="num">858</td>
+        <td class="num">8</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 guardrail</td>
+        <td>candidate</td>
+        <td class="num">38.16%</td>
+        <td class="num">33.49%</td>
+        <td class="num">65.66%</td>
+        <td class="num good">+17.52pp</td>
+        <td class="num">57.62%</td>
+        <td class="num">86.05%</td>
+        <td class="num">75.52%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</td>
+        <td>candidate</td>
+        <td class="num">38.55%</td>
+        <td class="num">33.83%</td>
+        <td class="num">66.45%</td>
+        <td class="num good">+18.31pp</td>
+        <td class="num">58.31%</td>
+        <td class="num">86.45%</td>
+        <td class="num">75.87%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    
+
+      <tr>
+        <td>方案 11: Dense 硬切單課候選池 + 主專長 + 時間序 prior</td>
+        <td>candidate</td>
+        <td class="num">38.42%</td>
+        <td class="num">33.72%</td>
+        <td class="num">66.58%</td>
+        <td class="num good">+18.44pp</td>
+        <td class="num">58.43%</td>
+        <td class="num">86.18%</td>
+        <td class="num">75.64%</td>
+        <td>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</td>
+        <td class="num">760</td>
+        <td class="num">106</td>
+      </tr>
+    </tbody>
+      </table>
+    </div>
+  </section>
+  <nav class="tabs"><button class="tab-button active" data-tab="tab-0">Baseline: 完整候選池 + Top5-history</button>
+<button class="tab-button " data-tab="tab-1">方案 1: 完整候選池 + aggregate 40%</button>
+<button class="tab-button " data-tab="tab-2">方案 2: 完整候選池 + aggregate 80% + 時間序 prior</button>
+<button class="tab-button " data-tab="tab-3">方案 3: dept + division 硬切單課候選池</button>
+<button class="tab-button " data-tab="tab-4">方案 4: 硬切單課候選池 + aggregate 80%</button>
+<button class="tab-button " data-tab="tab-5">方案 5: 硬切單課候選池 + aggregate 80% + 時間序 prior</button>
+<button class="tab-button " data-tab="tab-6">診斷: 主管實際課別 oracle</button>
+<button class="tab-button " data-tab="tab-7">未完成: BM25 lexical index</button>
+<button class="tab-button " data-tab="tab-8">方案 6: 完整候選池: 主專長一致性 guardrail</button>
+<button class="tab-button " data-tab="tab-9">方案 6: 完整候選池: 主專長一致性 + aggregate 最佳權重</button>
+<button class="tab-button " data-tab="tab-10">方案 7: dept + division 硬切單課候選池: 主專長一致性 guardrail</button>
+<button class="tab-button " data-tab="tab-11">方案 7: dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</button>
+<button class="tab-button " data-tab="tab-12">方案 8: Dense 完整候選池: 主專長一致性 guardrail</button>
+<button class="tab-button " data-tab="tab-13">方案 8: Dense 完整候選池: 主專長一致性 + aggregate 最佳權重</button>
+<button class="tab-button " data-tab="tab-14">方案 9: Dense 完整候選池 + 主專長 + 時間序 prior</button>
+<button class="tab-button " data-tab="tab-15">方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 guardrail</button>
+<button class="tab-button " data-tab="tab-16">方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</button>
+<button class="tab-button " data-tab="tab-17">方案 11: Dense 硬切單課候選池 + 主專長 + 時間序 prior</button></nav>
+  
+      <section class="tab-panel active" id="tab-0">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>Baseline: 完整候選池 + Top5-history</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先用新案去找每位顧問過去最像的 5 個案子；誰的舊案最像，就排前面。同一家公司的舊案先拿掉，避免把已發生的承接結果當成推薦原因。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>25.99%</strong>
+            <em>223 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>25.75%</strong>
+            <em>223 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>48.14%</strong>
+            <em>+0.00pp vs baseline; gap to 70%: +21.86pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>47.69%</strong>
+            <em>413 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>64.69%</strong>
+            <em>MRR 0.433</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>64.09%</strong>
+            <em>555 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>沿用 2026-06-09 company-holdout grouped POC；候選池維持部門兩課，排除同公司歷史案件後用 Top5-history lexical score 排序。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>基準 Top3 只有 48.14%，Top5 也只有 64.69%；表示同公司排除後，目前 lexical Top5-history 不足以穩定把實際顧問放進前三。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>先測是否能用顧問完整能力包 aggregate score 補足逐案 Top5-history 過度依賴單案相似的問題。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-1">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 1: 完整候選池 + aggregate 40%</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>不要只看 5 個最像的舊案，也把顧問整體能力包納入 40%。白話說，就是避免某個顧問只因為一兩個舊案文字很像就排太前面。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>30.07%</strong>
+            <em>258 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>29.79%</strong>
+            <em>258 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>52.68%</strong>
+            <em>+4.55pp vs baseline; gap to 70%: +17.32pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>52.19%</strong>
+            <em>452 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>66.90%</strong>
+            <em>MRR 0.469</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>66.28%</strong>
+            <em>574 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>保留完整候選池與同公司排除，將排序分數改為 60% Top5-history + 40% consultant aggregate guardrail score。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top3 提升到 52.68%，比基準多 4.55pp；aggregate 能補一些顧問整體能力訊號，但單靠權重重排仍離 70% 很遠。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>測時間序 supervisor prior，檢查主管歷史選擇慣性是否能補上非語意因素。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-2">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 2: 完整候選池 + aggregate 80% + 時間序 prior</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>大幅提高顧問整體能力包的比重，再加一點「過去主管常派誰」的歷史慣性；每筆案子只看它發生以前的紀錄，避免偷用未來答案。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>34.85%</strong>
+            <em>299 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>34.53%</strong>
+            <em>299 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>56.99%</strong>
+            <em>+8.86pp vs baseline; gap to 70%: +13.01pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>56.47%</strong>
+            <em>489 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>70.05%</strong>
+            <em>MRR 0.509</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>69.40%</strong>
+            <em>601 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>保留完整候選池；排序分數用 20% Top5-history + 80% aggregate，再加上只看該案日期以前的 supervisor prior。其中 dept + division 歷史課別偏好 prior 只是軟性加分，不會縮小候選池。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top3 到 56.99%，Top5 到 70.05%。prior 可把更多實際顧問推進 Top5，但還不能穩定進 Top3。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>接著測候選池邊界是否太寬：把業務一/二部依分工產業拆到單課，但同時監控 not-evaluated 上升。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-3">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 3: dept + division 硬切單課候選池</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>原本一個部門會同時看兩個課的顧問，這次改成依分工產業硬切到單一課。候選人變少，所以比較容易把正確顧問放進前三；但風險是把主管實際選的人排除在候選池外。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>31.71%</strong>
+            <em>241 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>27.83%</strong>
+            <em>241 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>59.34%</strong>
+            <em>+11.21pp vs baseline; gap to 70%: +10.66pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>52.08%</strong>
+            <em>451 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>79.61%</strong>
+            <em>MRR 0.509</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>69.86%</strong>
+            <em>605 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>將業務一部/二部依 division_industry 硬切成單課候選池；台中業務部維持原兩課；排序仍用 Top5-history。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top3 evaluated 升到 59.34%，但 not evaluated 從 8 增為 106，Top3 all-groups 只有 52.08%。這是候選池變窄帶來的表面提升，不能單看 evaluated。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>保留此候選池測 aggregate blend，看排序能力在較小候選池中是否接近 70%。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-4">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 4: 硬切單課候選池 + aggregate 80%</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先把候選池硬切到單課，再將排序分數改為 20% Top5-history + 80% 顧問整體能力包分數。白話說，就是少看一點單案文字像不像，多看顧問整體經驗是否穩定適合。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>38.82%</strong>
+            <em>295 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>34.06%</strong>
+            <em>295 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>65.13%</strong>
+            <em>+17.00pp vs baseline; gap to 70%: +4.87pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>57.16%</strong>
+            <em>495 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>81.58%</strong>
+            <em>MRR 0.563</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>71.59%</strong>
+            <em>620 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在硬切單課候選池下，將排序分數改為 20% Top5-history + 80% aggregate guardrail score。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top3 evaluated 到 65.13%，是目前最強的純重排/候選池組合；但 all-groups 仍只有 57.16%，主要瓶頸是硬切單課規則排掉 106 個實際主管選擇。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>加上時間序 prior，確認是否能把 Top3 再往 70% 推近。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-5">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 5: 硬切單課候選池 + aggregate 80% + 時間序 prior</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>在硬切單課候選池與顧問整體能力包分數上，再加入只看過去資料的顧問整體 prior。白話說，就是在不偷看答案的前提下，讓系統知道某些顧問過去比較常被主管選中。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>40.26%</strong>
+            <em>306 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>35.33%</strong>
+            <em>306 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>65.66%</strong>
+            <em>+17.52pp vs baseline; gap to 70%: +4.34pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>57.62%</strong>
+            <em>499 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>81.58%</strong>
+            <em>MRR 0.571</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>71.59%</strong>
+            <em>620 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在硬切單課候選池與 aggregate-heavy score 上，加入只看過去資料的顧問整體 prior。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top3 evaluated 到 65.66%，比方案 4 只多 0.53pp；已接近目前 lexical POC 的安全上限，仍差 4.34pp 才到 70%。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>下一輪最值得試的是正式 dense embedding 或重建相似度索引；目前 lexical 分數的排序能力不足。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-6">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>診斷: 主管實際課別 oracle</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>這不是可上線方案，而是壓力測試：假設我們事先知道主管最後選的是哪一課，只在那一課裡排序。因為用了答案欄位，所以只能用來判斷瓶頸，不可當正式推薦規則。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>36.13%</strong>
+            <em>310 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>35.80%</strong>
+            <em>310 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>63.29%</strong>
+            <em>+15.15pp vs baseline; gap to 70%: +6.71pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>62.70%</strong>
+            <em>543 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>79.95%</strong>
+            <em>MRR 0.533</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>79.21%</strong>
+            <em>686 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 7.17 人；範圍 5–8 人；5人:76組、6人:169組、7人:143組、8人:470組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>只作診斷：用主管實際 process_ug_name 過濾候選人，再用 aggregate-heavy score 排序。此方案使用答案欄位，不能上線。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>即使知道主管實際課別，Top3 evaluated 也只有約 63%，代表瓶頸不只是候選池寬窄，而是目前 lexical similarity / corpus representation 無法把正確顧問排到前三。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>把目標 70% 拆成兩件事：先補 similarity 品質，再回頭設計不排除實際顧問的候選池治理規則。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-7">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>未完成: BM25 lexical index</h2>
+            <div class="status">blocked_timeout</div>
+            <h3>白話做法</h3>
+            <p>想換另一種本機文字相似度算法，讓長短文字與關鍵詞重複的影響更合理；但這輪全量即時計算太慢，還沒有可靠結果。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>0.00%</strong>
+            <em>0 / 0 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>0.00%</strong>
+            <em>0 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>0.00%</strong>
+            <em>-48.14pp vs baseline; gap to 70%: +70.00pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>0.00%</strong>
+            <em>0 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>0.00%</strong>
+            <em>MRR 0.000</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>0.00%</strong>
+            <em>0 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>未完成 / 不適用</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>嘗試把手寫 cosine 換成 BM25 類 ranking，但全量即時計算超過本輪時間上限，未列為有效結果。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>BM25 方向仍合理，但需要先快取每個 history case 的欄位向量與長度，或改成候選層預索引；不能用超時結果判斷成效。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>下一輪若不接 dense embedding，可先做 BM25 快取版與 query/history top-k 候選召回，再測 Top3。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-8">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 6: 完整候選池: 主專長一致性 guardrail</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>新案仍逐筆比對顧問歷史案件，但 Top5 分數會乘上主專長一致性。白話說：曾做過幾筆相似案還不夠，還要看這些案子是不是接近顧問的穩定主專長。候選池仍是完整部門池。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>28.09%</strong>
+            <em>241 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>27.83%</strong>
+            <em>241 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>49.30%</strong>
+            <em>+1.17pp vs baseline; gap to 70%: +20.70pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>48.85%</strong>
+            <em>423 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>66.20%</strong>
+            <em>MRR 0.451</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>65.59%</strong>
+            <em>568 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>新增 main_specialty_consistency = aggregate alignment + evidence depth + Top5 balance。若 Top5 是少數孤立高分案，排序分數會被折減。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 28.09%，Top1 all groups 是 27.83%；Top3 evaluated 是 49.30%，Top3 all groups 是 48.85%；Top5 evaluated 是 66.20%，Top5 all groups 是 65.59%。 距離 70% 還差 20.70pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>如果這個 guardrail 不提升 Top3，但降低錯誤高分案例，下一步要把它當成風險標記，而不是主排序分數。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-9">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 6: 完整候選池: 主專長一致性 + aggregate 最佳權重</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先用主專長一致性修正 Top5-history，再與顧問整體能力包分數混合；目前掃描後最佳是 30% guarded Top5-history + 70% aggregate。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>31.47%</strong>
+            <em>270 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>31.18%</strong>
+            <em>270 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>54.31%</strong>
+            <em>+6.18pp vs baseline; gap to 70%: +15.69pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>53.81%</strong>
+            <em>466 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>67.48%</strong>
+            <em>MRR 0.481</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>66.86%</strong>
+            <em>579 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在 0% 到 100% 間每 10% 掃描 guarded Top5-history 與 aggregate 的權重，選 Top3 evaluated、Top3 all、MRR 較佳的組合。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 31.47%，Top1 all groups 是 31.18%；Top3 evaluated 是 54.31%，Top3 all groups 是 53.81%；Top5 evaluated 是 67.48%，Top5 all groups 是 66.86%。 距離 70% 還差 15.69pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若仍未達 70%，代表只靠相似度和主專長 guardrail 不足，下一步需要補候選池治理或主管分派 prior。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-10">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 7: dept + division 硬切單課候選池: 主專長一致性 guardrail</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>新案仍逐筆比對顧問歷史案件，但 Top5 分數會乘上主專長一致性。白話說：曾做過幾筆相似案還不夠，還要看這些案子是不是接近顧問的穩定主專長。這是硬切單課 trial，只作上限測試；會把另一課顧問排除在候選池外。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>34.87%</strong>
+            <em>265 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>30.60%</strong>
+            <em>265 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>60.26%</strong>
+            <em>+12.13pp vs baseline; gap to 70%: +9.74pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>52.89%</strong>
+            <em>458 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>80.66%</strong>
+            <em>MRR 0.529</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>70.79%</strong>
+            <em>613 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>新增 main_specialty_consistency = aggregate alignment + evidence depth + Top5 balance。若 Top5 是少數孤立高分案，排序分數會被折減。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 34.87%，Top1 all groups 是 30.60%；Top3 evaluated 是 60.26%，Top3 all groups 是 52.89%；Top5 evaluated 是 80.66%，Top5 all groups 是 70.79%。 距離 70% 還差 9.74pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>如果這個 guardrail 不提升 Top3，但降低錯誤高分案例，下一步要把它當成風險標記，而不是主排序分數。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-11">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 7: dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先用主專長一致性修正 Top5-history，再與顧問整體能力包分數混合；目前掃描後最佳是 20% guarded Top5-history + 80% aggregate。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>38.42%</strong>
+            <em>292 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>33.72%</strong>
+            <em>292 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>65.00%</strong>
+            <em>+16.86pp vs baseline; gap to 70%: +5.00pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>57.04%</strong>
+            <em>494 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>81.45%</strong>
+            <em>MRR 0.560</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>71.48%</strong>
+            <em>619 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在 0% 到 100% 間每 10% 掃描 guarded Top5-history 與 aggregate 的權重，選 Top3 evaluated、Top3 all、MRR 較佳的組合。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 38.42%，Top1 all groups 是 33.72%；Top3 evaluated 是 65.00%，Top3 all groups 是 57.04%；Top5 evaluated 是 81.45%，Top5 all groups 是 71.48%。 距離 70% 還差 5.00pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若仍未達 70%，代表只靠相似度和主專長 guardrail 不足，下一步需要補候選池治理或主管分派 prior。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-12">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 8: Dense 完整候選池: 主專長一致性 guardrail</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>新案仍逐筆比對顧問歷史案件，但 Top5 分數會乘上主專長一致性。白話說：曾做過幾筆相似案還不夠，還要看這些案子是不是接近顧問的穩定主專長。候選池仍是完整部門池。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>29.84%</strong>
+            <em>256 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>29.56%</strong>
+            <em>256 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>53.85%</strong>
+            <em>+5.71pp vs baseline; gap to 70%: +16.15pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>53.35%</strong>
+            <em>462 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>72.49%</strong>
+            <em>MRR 0.477</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>71.82%</strong>
+            <em>622 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>新增 main_specialty_consistency = aggregate alignment + evidence depth + Top5 balance。若 Top5 是少數孤立高分案，排序分數會被折減。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 29.84%，Top1 all groups 是 29.56%；Top3 evaluated 是 53.85%，Top3 all groups 是 53.35%；Top5 evaluated 是 72.49%，Top5 all groups 是 71.82%。 距離 70% 還差 16.15pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>如果這個 guardrail 不提升 Top3，但降低錯誤高分案例，下一步要把它當成風險標記，而不是主排序分數。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-13">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 8: Dense 完整候選池: 主專長一致性 + aggregate 最佳權重</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先用主專長一致性修正 Top5-history，再與顧問整體能力包分數混合；目前掃描後最佳是 100% guarded Top5-history + 0% aggregate。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>29.84%</strong>
+            <em>256 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>29.56%</strong>
+            <em>256 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>53.85%</strong>
+            <em>+5.71pp vs baseline; gap to 70%: +16.15pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>53.35%</strong>
+            <em>462 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>72.49%</strong>
+            <em>MRR 0.477</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>71.82%</strong>
+            <em>622 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在 0% 到 100% 間每 10% 掃描 guarded Top5-history 與 aggregate 的權重，選 Top3 evaluated、Top3 all、MRR 較佳的組合。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 29.84%，Top1 all groups 是 29.56%；Top3 evaluated 是 53.85%，Top3 all groups 是 53.35%；Top5 evaluated 是 72.49%，Top5 all groups 是 71.82%。 距離 70% 還差 16.15pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若仍未達 70%，代表只靠相似度和主專長 guardrail 不足，下一步需要補候選池治理或主管分派 prior。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-14">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 9: Dense 完整候選池 + 主專長 + 時間序 prior</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>在 dense embedding 與主專長一致性後，再加只看過去資料的主管分派慣性。這用來測文字相似度外的穩定派案因素。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>34.38%</strong>
+            <em>295 / 858 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>34.06%</strong>
+            <em>295 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>58.39%</strong>
+            <em>+10.26pp vs baseline; gap to 70%: +11.61pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>57.85%</strong>
+            <em>501 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>75.17%</strong>
+            <em>MRR 0.516</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>74.48%</strong>
+            <em>645 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 13.92 人；範圍 11–15 人；11人:135組、14人:389組、15人:334組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>以 dense 完整候選池的最佳 guarded Top5-history / aggregate 權重為底，再加入 online prior。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 34.38%，Top1 all groups 是 34.06%；Top3 evaluated 是 58.39%，Top3 all groups 是 57.85%；Top5 evaluated 是 75.17%，Top5 all groups 是 74.48%。 距離 70% 還差 11.61pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若這仍未達 70%，下一步要補正式候選池治理資料，而不是只調 embedding。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-15">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 guardrail</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>新案仍逐筆比對顧問歷史案件，但 Top5 分數會乘上主專長一致性。白話說：曾做過幾筆相似案還不夠，還要看這些案子是不是接近顧問的穩定主專長。這是硬切單課 trial，只作上限測試；會把另一課顧問排除在候選池外。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>38.16%</strong>
+            <em>290 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>33.49%</strong>
+            <em>290 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>65.66%</strong>
+            <em>+17.52pp vs baseline; gap to 70%: +4.34pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>57.62%</strong>
+            <em>499 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>86.05%</strong>
+            <em>MRR 0.567</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>75.52%</strong>
+            <em>654 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>新增 main_specialty_consistency = aggregate alignment + evidence depth + Top5 balance。若 Top5 是少數孤立高分案，排序分數會被折減。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 38.16%，Top1 all groups 是 33.49%；Top3 evaluated 是 65.66%，Top3 all groups 是 57.62%；Top5 evaluated 是 86.05%，Top5 all groups 是 75.52%。 距離 70% 還差 4.34pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>如果這個 guardrail 不提升 Top3，但降低錯誤高分案例，下一步要把它當成風險標記，而不是主排序分數。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-16">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 10: Dense dept + division 硬切單課候選池: 主專長一致性 + aggregate 最佳權重</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>先用主專長一致性修正 Top5-history，再與顧問整體能力包分數混合；目前掃描後最佳是 30% guarded Top5-history + 70% aggregate。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>38.55%</strong>
+            <em>293 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>33.83%</strong>
+            <em>293 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>66.45%</strong>
+            <em>+18.31pp vs baseline; gap to 70%: +3.55pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>58.31%</strong>
+            <em>505 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>86.45%</strong>
+            <em>MRR 0.570</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>75.87%</strong>
+            <em>657 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>在 0% 到 100% 間每 10% 掃描 guarded Top5-history 與 aggregate 的權重，選 Top3 evaluated、Top3 all、MRR 較佳的組合。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 38.55%，Top1 all groups 是 33.83%；Top3 evaluated 是 66.45%，Top3 all groups 是 58.31%；Top5 evaluated 是 86.45%，Top5 all groups 是 75.87%。 距離 70% 還差 3.55pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若仍未達 70%，代表只靠相似度和主專長 guardrail 不足，下一步需要補候選池治理或主管分派 prior。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+
+      <section class="tab-panel " id="tab-17">
+        <div class="panel-grid">
+          <article class="card">
+            <h2>方案 11: Dense 硬切單課候選池 + 主專長 + 時間序 prior</h2>
+            <div class="status">completed</div>
+            <h3>白話做法</h3>
+            <p>在硬切單課候選池中，同時使用 dense embedding、主專長一致性與只看過去資料的顧問 prior。這是目前縮池方向的上限測試。</p>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 evaluated</span>
+            <strong>38.42%</strong>
+            <em>292 / 760 evaluated groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top1 all groups</span>
+            <strong>33.72%</strong>
+            <em>292 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 evaluated</span>
+            <strong>66.58%</strong>
+            <em>+18.44pp vs baseline; gap to 70%: +3.42pp</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top3 all groups</span>
+            <strong>58.43%</strong>
+            <em>506 / 866 groups</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 evaluated</span>
+            <strong>86.18%</strong>
+            <em>MRR 0.568</em>
+          </article>
+          <article class="card kpi-card">
+            <span>Top5 all groups</span>
+            <strong>75.64%</strong>
+            <em>655 / 866 groups</em>
+          </article>
+        </div>
+        <article class="card pool-card">
+          <h3>候選池人數</h3>
+          <p>平均 8.13 人；範圍 6–11 人；6人:98組、7人:112組、8人:415組、11人:135組</p>
+        </article>
+        <div class="two-col">
+          <article class="card">
+            <h3>本次改了什麼</h3>
+            <p>以 dense 硬切單課候選池的最佳 guarded Top5-history / aggregate 權重為底，再加入 online prior。</p>
+          </article>
+          <article class="card">
+            <h3>Insight</h3>
+            <p>Top1 evaluated 是 38.42%，Top1 all groups 是 33.72%；Top3 evaluated 是 66.58%，Top3 all groups 是 58.43%；Top5 evaluated 是 86.18%，Top5 all groups 是 75.64%。 距離 70% 還差 3.42pp。</p>
+          </article>
+        </div>
+        <div class="two-col">
+          <article class="card">
+            <h3>Next Best Test</h3>
+            <p>若 evaluated 高但 all-groups 仍低，代表候選池排除真實主管選擇仍是主要上線風險。</p>
+          </article>
+          <article class="card">
+            <h3>讀法提醒</h3>
+            <p>若 not evaluated 上升，代表方案把部分主管實際選擇排除在候選池外；這時要同時看 Top3 all groups，不能只看 Top3 evaluated。</p>
+          </article>
+        </div>
+      </section>
+    
+</main>
+<script>
+  document.querySelectorAll('.tab-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.tab-button').forEach((item) => item.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById(button.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
